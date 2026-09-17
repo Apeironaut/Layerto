@@ -1,0 +1,3 @@
+/* Required Tailwind entry point — no styles live here. Tokens: src/theme/ */
+@import 'tailwindcss';
+@config '../theme/tailwind.config.ts';
