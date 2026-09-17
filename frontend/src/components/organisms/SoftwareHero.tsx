@@ -10,7 +10,7 @@ export function SoftwareHero() {
         <Container as="section" className="relative grid items-center gap-8 py-12 lg:min-h-[calc(100svh-4rem)] lg:grid-cols-[1.1fr_0.9fr]">
             <div className="px-1 lg:pl-6">
                 <AnimatedHeadline lines={headline} />
-                <Text size="lg" muted className="mb-8 max-w-xl animate-fade-up [animation-delay:450ms]">{lead}</Text>
+                <Text size="lg" muted className="mb-8 max-w-3xl animate-fade-up [animation-delay:450ms]">{lead}</Text>
                 <div className="flex animate-fade-up flex-wrap gap-6 [animation-delay:600ms]">
                     <StartProjectButton />
                     <Button variant="ghost" href="#services">See what we build</Button>

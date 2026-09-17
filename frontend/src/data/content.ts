@@ -1,8 +1,13 @@
 /** Page copy kept out of components so text edits don't touch markup. */
 export const content = {
     hero: {
-        headline: ['Custom software,', 'built in layers.'],
-        lead: 'We design and build web apps, mobile apps and AI features for businesses in Sri Lanka and beyond. Clear scope, weekly releases, code you own.',
+        headline: ['Custom software', 'built in layers.'],
+        lead: 'We specialize in transforming ambitious ideas into tangible realities, \
+                crafted exactly to your vision. Every successful initiative starts with a \
+                deep understanding of your unique goals. By establishing a crystal-clear scope \
+                from day one, we eliminate guesswork and ensure seamless execution. Our focus is \
+                listening to what you want to achieve and engineering custom solutions that bring \
+                your concepts to life precisely as you imagined.'
     },
     services: { title: 'What we build', intro: 'Web, mobile, AI and the infrastructure underneath.' },
     process: { title: 'How a project runs' },
