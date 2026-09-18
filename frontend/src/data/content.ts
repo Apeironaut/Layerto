@@ -14,8 +14,9 @@ export const content = {
     about: {
         title: 'About Layerto',
         paragraphs: [
-            'Layerto is a team of five engineers from Sri Lanka. Our long-term work is an AI middle layer: a gateway that sits between applications and language models.',
-            'Client projects fund that research, and the research makes our client work better. The same engineers who build the gateway build your software.',
+            'Layerto is a startup based in Sri Lanka, building custom software for clients who need it done right the first time.',
+            'Our long-term work is an AI middle layer, a gateway that sits between applications and language models, and that research shapes how we approach every client project, clean architecture, sensible defaults and nothing bolted on that does not need to be there.',
+            'Client work funds the research, and the research makes our client work better. We stay small on purpose, so the people you talk to are the people building your software.',
         ],
         pillarsTitle: 'The middle layer',
     },

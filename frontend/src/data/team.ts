@@ -16,33 +16,33 @@ export interface TeamMember {
 
 export const team: TeamMember[] = [
     {
-        name: 'Naveen',
-        role: 'Founder & AI Engineer',
+        name: 'Naveen Chethiya',
+        role: 'Founder & AI/ML Engineer',
         focus: 'Machine learning, NLP and computer vision. Leads architecture and the AI middle-layer research.',
         links: [{ label: 'Hugging Face', href: 'https://huggingface.co/Naviya-C' }],
     },
     {
         name: 'Janitha Dilsham',
-        role: 'DevOps & Cloud Engineer',
-        focus: 'TODO: cloud infrastructure, CI/CD and keeping production stable.',
+        role: 'Co-founder & Cloud Engineer',
+        focus: 'Cloud infrastructure, CI/CD pipelines and deployments. Keeps production stable, scalable and cost-efficient.',
         links: [],
     },
     {
         name: 'Thareesha Marasinghe',
-        role: 'Software & AI Engineer',
-        focus: 'TODO: short line about focus and strengths.',
+        role: 'Co-founder & Software Engineer',
+        focus: 'Full-stack development across web and backend systems, turning product requirements into reliable, well-tested software.',
         links: [],
     },
     {
         name: 'Mayura Pabasara',
-        role: 'Software Engineer',
-        focus: 'TODO: short line about focus and strengths.',
+        role: 'Co-founder & Software Engineer',
+        focus: 'Full-stack development, building clean, maintainable interfaces and the APIs that power them.',
         links: [],
     },
     {
         name: 'Imesh Rajakaruna',
-        role: 'Software Engineer',
-        focus: 'TODO: short line about focus and strengths.',
+        role: 'Co-founder & Software Engineer',
+        focus: 'Full-stack development, focused on solid engineering fundamentals and shipping features end to end.',
         links: [],
     },
 ]
