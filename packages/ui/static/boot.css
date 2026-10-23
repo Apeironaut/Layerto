@@ -1,0 +1,70 @@
+/*
+ * Boot screen shown before JavaScript loads (copied into each app's public/ folder).
+ * Progress comes from real milestones via packages/ui/src/boot/boot.ts, which sets
+ * --boot-inset (how much of the logo is still hidden, from the top).
+ */
+.boot {
+  --boot-bg: #F2F3F5;
+  --boot-muted: #5B5F6B;
+  --boot-inset: 100%;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: var(--boot-bg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  transition: opacity 280ms ease 160ms;
+}
+[data-theme="dark"] .boot {
+  --boot-bg: #0F1013;
+  --boot-muted: #9A9DA8;
+}
+.boot__logo {
+  position: relative;
+  width: 128px;
+  height: 128px;
+}
+.boot__logo img {
+  position: absolute;
+  inset: 0;
+  width: 128px;
+  height: 128px;
+  user-select: none;
+}
+/* Faint full logo: shows the shape that is being built. */
+.boot__ghost {
+  opacity: 0.12;
+  filter: grayscale(1);
+}
+/* Real progress: revealed bottom-up, one logo layer per milestone. */
+.boot__fill {
+  clip-path: inset(var(--boot-inset) 0 0 0);
+  transition: clip-path 360ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.boot__label {
+  margin: 0;
+  font-size: 13px;
+  color: var(--boot-muted);
+  min-height: 1.5em;
+}
+.boot__slow {
+  margin: 0;
+  font-size: 12px;
+  color: var(--boot-muted);
+  opacity: 0;
+  animation: boot-slow 0.3s ease 12s forwards;
+}
+.boot--done {
+  opacity: 0;
+  pointer-events: none;
+}
+@keyframes boot-slow {
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boot, .boot__fill { transition: none; }
+}

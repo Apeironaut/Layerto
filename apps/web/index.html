@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Layerto — The layer between AI and the real world</title>
+    <meta name="description" content="Layerto sits between your software and AI: Layerto Vision for specialist image models, and Charon for AI agents. Every call is checked first and recorded in a tamper-evident ledger." />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preload" as="image" href="/brand/layerto-symbol.png" />
+    <link rel="stylesheet" href="/boot.css" />
+    <script src="/theme-init.js"></script>
+  </head>
+  <body>
+    <!-- Boot screen: visible before JavaScript loads; real progress comes from boot.ts. -->
+    <div id="boot" class="boot" role="progressbar" aria-label="Loading Layerto" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="boot__logo">
+        <img class="boot__ghost" src="/brand/layerto-symbol.png" alt="" width="128" height="128" />
+        <img class="boot__fill" src="/brand/layerto-symbol.png" alt="" width="128" height="128" />
+      </div>
+      <p id="boot-label" class="boot__label" aria-live="polite">Loading</p>
+      <p class="boot__slow">Still loading. Check your connection, or refresh the page.</p>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

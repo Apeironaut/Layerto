@@ -1,0 +1,299 @@
+@import "tailwindcss";
+
+/* System fonts only (M8). No @font-face, no webfont downloads. */
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+:root {
+  /* Light Theme Tokens (Default) */
+  --color-page: #F2F3F5;
+  --color-card: #FFFFFF;
+  --color-raised: #FFFFFF;
+  --color-ink: #15161A;
+  --color-ink-secondary: #363942;
+  --color-muted: #5B5F6B;
+  --color-line: #E3E5EA;
+  --color-line-strong: #CDD0D8;
+  --color-crimson: #A3122A;
+  --color-crimson-hover: #8B0F24;
+  --color-crimson-fill: #A3122A;
+  --color-crimson-tint: #FBEAED;
+  --color-crimson-border: #E8B4BC;
+  --color-focus: #A3122A;
+
+  /* Shadows */
+  --shadow-l1: 0 1px 3px rgba(21, 22, 26, 0.04), 0 2px 8px rgba(21, 22, 26, 0.03);
+  --shadow-l2: 0 4px 16px rgba(21, 22, 26, 0.08), 0 1px 3px rgba(21, 22, 26, 0.04);
+  --shadow-l3: 0 12px 40px rgba(21, 22, 26, 0.16), 0 4px 12px rgba(21, 22, 26, 0.08);
+
+  /* Radii */
+  --radius-l1: 20px;
+  --radius-l2: 16px;
+  --radius-l3: 24px;
+  --radius-control: 12px;
+  --radius-pill: 999px;
+}
+
+[data-theme="dark"] {
+  /* Dark Theme Tokens */
+  --color-page: #0F1013;
+  --color-card: #18191E;
+  --color-raised: #21222A;
+  --color-ink: #ECEDEF;
+  --color-ink-secondary: #C8CBD2;
+  --color-muted: #9A9DA8;
+  --color-line: #2A2C33;
+  --color-line-strong: #3A3D46;
+  --color-crimson: #F04D65;
+  --color-crimson-hover: #F85A72;
+  --color-crimson-fill: #7A1020;
+  --color-crimson-tint: #2A1418;
+  --color-crimson-border: #4D1922;
+  --color-focus: #F04D65;
+
+  /* Shadows */
+  --shadow-l1: 0 1px 3px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-l2: 0 4px 20px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-l3: 0 16px 48px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+
+/* Accent palettes (Settings → Appearance). Crimson is the default brand accent. */
+[data-accent="ocean"] {
+  --color-crimson: #0E6BA8;
+  --color-crimson-hover: #0B5A8E;
+  --color-crimson-fill: #0E6BA8;
+  --color-crimson-tint: #E6F1F9;
+  --color-crimson-border: #A9CDE6;
+  --color-focus: #0E6BA8;
+}
+[data-theme="dark"][data-accent="ocean"] {
+  --color-crimson: #4DB3F0;
+  --color-crimson-hover: #62BEF4;
+  --color-crimson-fill: #0D4B73;
+  --color-crimson-tint: #0F2230;
+  --color-crimson-border: #173A52;
+  --color-focus: #4DB3F0;
+}
+[data-accent="forest"] {
+  --color-crimson: #1F7A4C;
+  --color-crimson-hover: #18653E;
+  --color-crimson-fill: #1F7A4C;
+  --color-crimson-tint: #E7F4EC;
+  --color-crimson-border: #A6D6B9;
+  --color-focus: #1F7A4C;
+}
+[data-theme="dark"][data-accent="forest"] {
+  --color-crimson: #4CC98A;
+  --color-crimson-hover: #5ED69A;
+  --color-crimson-fill: #145A37;
+  --color-crimson-tint: #10251A;
+  --color-crimson-border: #1A3D2A;
+  --color-focus: #4CC98A;
+}
+[data-accent="violet"] {
+  --color-crimson: #6D3FC9;
+  --color-crimson-hover: #5A31AC;
+  --color-crimson-fill: #6D3FC9;
+  --color-crimson-tint: #F0EAFC;
+  --color-crimson-border: #C9B5F0;
+  --color-focus: #6D3FC9;
+}
+[data-theme="dark"][data-accent="violet"] {
+  --color-crimson: #A986F5;
+  --color-crimson-hover: #B699F8;
+  --color-crimson-fill: #4A2A8F;
+  --color-crimson-tint: #1D1530;
+  --color-crimson-border: #30224F;
+  --color-focus: #A986F5;
+}
+[data-accent="amber"] {
+  --color-crimson: #B45309;
+  --color-crimson-hover: #974507;
+  --color-crimson-fill: #B45309;
+  --color-crimson-tint: #FDF2E4;
+  --color-crimson-border: #F0C994;
+  --color-focus: #B45309;
+}
+[data-theme="dark"][data-accent="amber"] {
+  --color-crimson: #F5A23D;
+  --color-crimson-hover: #F8B15C;
+  --color-crimson-fill: #7C3A06;
+  --color-crimson-tint: #2A1C0C;
+  --color-crimson-border: #4A3010;
+  --color-focus: #F5A23D;
+}
+[data-accent="graphite"] {
+  --color-crimson: #2F3542;
+  --color-crimson-hover: #1F2430;
+  --color-crimson-fill: #2F3542;
+  --color-crimson-tint: #ECEEF2;
+  --color-crimson-border: #C3C8D2;
+  --color-focus: #2F3542;
+}
+[data-theme="dark"][data-accent="graphite"] {
+  --color-crimson: #B9C0CC;
+  --color-crimson-hover: #CBD1DB;
+  --color-crimson-fill: #3A4150;
+  --color-crimson-tint: #1E2128;
+  --color-crimson-border: #30343E;
+  --color-focus: #B9C0CC;
+}
+
+/* Density: compact scales the whole interface down a notch. */
+html[data-density="compact"] { font-size: 14.5px; }
+
+@theme {
+  --color-page: var(--color-page);
+  --color-card: var(--color-card);
+  --color-raised: var(--color-raised);
+  --color-ink: var(--color-ink);
+  --color-ink-secondary: var(--color-ink-secondary);
+  --color-muted: var(--color-muted);
+  --color-line: var(--color-line);
+  --color-line-strong: var(--color-line-strong);
+  --color-crimson: var(--color-crimson);
+  --color-crimson-hover: var(--color-crimson-hover);
+  --color-crimson-fill: var(--color-crimson-fill);
+  --color-crimson-tint: var(--color-crimson-tint);
+  --color-crimson-border: var(--color-crimson-border);
+  --color-focus: var(--color-focus);
+
+  --radius-l1: 20px;
+  --radius-l2: 16px;
+  --radius-l3: 24px;
+  --radius-control: 12px;
+  --radius-pill: 999px;
+
+  --shadow-l1: var(--shadow-l1);
+  --shadow-l2: var(--shadow-l2);
+  --shadow-l3: var(--shadow-l3);
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Modular type scale, ratio 1.25 (base 16px) */
+  --text-xs: 0.8rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.55;
+  --text-base: 1rem;
+  --text-base--line-height: 1.6;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.5;
+  --text-xl: 1.563rem;
+  --text-xl--line-height: 1.35;
+  --text-2xl: 1.953rem;
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 2.441rem;
+  --text-3xl--line-height: 1.15;
+  --text-4xl: 3.052rem;
+  --text-4xl--line-height: 1.1;
+  --text-5xl: 3.815rem;
+  --text-5xl--line-height: 1.05;
+  --text-6xl: 4.768rem;
+  --text-6xl--line-height: 1.02;
+
+  --animate-logo-stack: logo-stack 1s cubic-bezier(0.65, 0, 0.35, 1) both;
+  --animate-scroll-cue: scroll-cue 1.6s ease-in-out infinite;
+
+  /* Logo loader: bottom-to-top wipe in 4 steps matching the PNG's layers
+     (measured rows on the 256px PNG: base/spine foot >= 196, dark red >= 146,
+     red >= 98, black top >= 0). */
+  @keyframes logo-stack {
+    0% { clip-path: inset(100% 0 0 0); }
+    18%, 25% { clip-path: inset(76.5% 0 0 0); }
+    43%, 50% { clip-path: inset(57% 0 0 0); }
+    68%, 75% { clip-path: inset(38% 0 0 0); }
+    93%, 100% { clip-path: inset(0 0 0 0); }
+  }
+
+  /* BoundingBoxCanvas draw-in (rects use pathLength=1000). */
+  @keyframes draw-box {
+    from { stroke-dashoffset: 1000; opacity: 0; }
+    to { stroke-dashoffset: 0; opacity: 1; }
+  }
+
+  @keyframes scroll-cue {
+    0%, 100% { transform: translateY(0); opacity: 0.6; }
+    50% { transform: translateY(6px); opacity: 1; }
+  }
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-sans);
+  }
+
+  body {
+    background-color: var(--color-page);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+
+  /* Hierarchy from size, weight and spacing only */
+  h1, h2, h3 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+    line-height: 1.2;
+  }
+
+  h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+    line-height: 1.3;
+  }
+
+  code, pre, kbd, samp {
+    font-family: var(--font-mono);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* Accessible interactive link style */
+  a:not([class*="no-underline"]) {
+    color: inherit;
+    text-decoration: none;
+    transition: color 140ms ease, text-decoration-color 140ms ease;
+  }
+
+  a:not([class*="no-underline"]):hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-crimson);
+  }
+
+  .svg-box-animated {
+    stroke-dasharray: 1000;
+    animation: draw-box 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .svg-box-animated {
+      stroke-dasharray: none;
+      animation: none;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

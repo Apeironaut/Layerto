@@ -1,0 +1,7 @@
+{
+  "name": "@layerto/core",
+  "private": true,
+  "scripts": {
+    "dev": "go run cmd/core/main.go"
+  }
+}

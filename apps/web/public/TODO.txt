@@ -1,0 +1,1 @@
+TODO(owner): Replace sample-image.png with your neutral sample image for the illustrative turtle demo.

@@ -1,0 +1,58 @@
+@import "../../../packages/ui/src/theme.css";
+@source "../../../packages/ui/src";
+
+/* ---- Workflow canvas (React Flow) themed with Layerto tokens ---- */
+.react-flow {
+  --xy-edge-stroke-default: var(--color-line-strong);
+  --xy-connectionline-stroke-default: var(--color-crimson);
+  --xy-selection-background-color-default: color-mix(in oklab, var(--color-crimson) 8%, transparent);
+  --xy-selection-border-default: 1px dashed var(--color-crimson);
+  --xy-attribution-background-color-default: transparent;
+  background: transparent;
+}
+.react-flow__controls {
+  box-shadow: var(--shadow-l1, 0 1px 3px rgb(0 0 0 / 0.1));
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+}
+.react-flow__controls-button {
+  background: var(--color-card);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink);
+  fill: currentColor;
+}
+.react-flow__controls-button:hover {
+  background: var(--color-crimson-tint);
+  color: var(--color-crimson);
+}
+.react-flow__minimap {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.react-flow__attribution a {
+  color: var(--color-muted);
+}
+.react-flow__node:focus-visible {
+  outline: none;
+}
+.react-flow__node:focus-visible > div {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+@keyframes workflow-edge-dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+.workflow-edge-running {
+  animation: workflow-edge-dash 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .workflow-edge-running {
+    animation: none;
+  }
+}
