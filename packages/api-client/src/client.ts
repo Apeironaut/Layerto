@@ -74,15 +74,29 @@ import type {
   ResearchNote,
   ResearchOverview,
   ResearchTask,
+  SpecimenItem,
+  DatasetSplitSnapshot,
+  AblationRun,
+  AreaAllocationInput,
+  ArenaItem,
+  CollaborationContract,
+  DomainInsight,
+  ResearchPublication,
   Team,
   UserSettings,
 } from '@layerto/types';
 
 export class LayertoClient {
   private baseUrl: string;
+  private activeAreaId?: string;
 
-  constructor(baseUrl = 'http://localhost:8080') {
+  constructor(baseUrl = 'http://localhost:8080', activeAreaId?: string) {
     this.baseUrl = baseUrl;
+    this.activeAreaId = activeAreaId;
+  }
+
+  areaScoped(areaId: string): LayertoClient {
+    return new LayertoClient(this.baseUrl, areaId);
   }
 
   private async request<T>(
@@ -90,6 +104,9 @@ export class LayertoClient {
     options: RequestInit = {}
   ): Promise<T> {
     const headers = new Headers(options.headers || {});
+    if (this.activeAreaId) {
+      headers.set('X-Research-Area-ID', this.activeAreaId);
+    }
     if (options.method && options.method !== 'GET' && options.method !== 'HEAD') {
       headers.set('X-Requested-With', 'XMLHttpRequest');
       if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
@@ -896,6 +913,13 @@ export class LayertoClient {
     return this.request(`/api/research/areas/${id}`, { method: 'DELETE' });
   }
 
+  async updateAreaAllocations(allocations: AreaAllocationInput[]): Promise<ResearchArea[]> {
+    return this.request<ResearchArea[]>('/api/research/areas/allocations', {
+      method: 'PUT',
+      body: JSON.stringify({ allocations }),
+    });
+  }
+
   private researchQS(f: { area?: string; q?: string; project?: string }) {
     const qs = new URLSearchParams(Object.entries(f).filter(([, v]) => v) as [string, string][]).toString();
     return qs ? `?${qs}` : '';
@@ -939,6 +963,86 @@ export class LayertoClient {
 
   async tasks(f: { area?: string } = {}): Promise<ResearchTask[]> {
     return this.researchList<ResearchTask>('tasks', f);
+  }
+
+  async specimens(f: { area?: string; q?: string } = {}): Promise<SpecimenItem[]> {
+    return this.researchList<SpecimenItem>('specimens', f);
+  }
+
+  async createSpecimen(body: Partial<SpecimenItem>): Promise<SpecimenItem> {
+    return this.researchCreate<SpecimenItem>('specimens', body as Record<string, unknown>);
+  }
+
+  async updateSpecimen(id: string, body: Partial<SpecimenItem>): Promise<SpecimenItem> {
+    return this.researchUpdate<SpecimenItem>('specimens', id, body as Record<string, unknown>);
+  }
+
+  async deleteSpecimen(id: string): Promise<unknown> {
+    return this.researchDelete('specimens', id);
+  }
+
+  async datasetSplits(f: { area?: string } = {}): Promise<DatasetSplitSnapshot[]> {
+    return this.researchList<DatasetSplitSnapshot>('dataset-splits', f);
+  }
+
+  async createDatasetSplit(body: Partial<DatasetSplitSnapshot>): Promise<DatasetSplitSnapshot> {
+    return this.researchCreate<DatasetSplitSnapshot>('dataset-splits', body as Record<string, unknown>);
+  }
+
+  async ablationRuns(f: { area?: string } = {}): Promise<AblationRun[]> {
+    return this.researchList<AblationRun>('ablation-runs', f);
+  }
+
+  async createAblationRun(body: Partial<AblationRun>): Promise<AblationRun> {
+    return this.researchCreate<AblationRun>('ablation-runs', body as Record<string, unknown>);
+  }
+
+  async updateAblationRun(id: string, body: Partial<AblationRun>): Promise<AblationRun> {
+    return this.researchUpdate<AblationRun>('ablation-runs', id, body as Record<string, unknown>);
+  }
+
+  async arenaItems(f: { area?: string } = {}): Promise<ArenaItem[]> {
+    return this.researchList<ArenaItem>('arena-items', f);
+  }
+
+  async createArenaItem(body: Partial<ArenaItem>): Promise<ArenaItem> {
+    return this.researchCreate<ArenaItem>('arena-items', body as Record<string, unknown>);
+  }
+
+  async collaborationContracts(f: { area?: string } = {}): Promise<CollaborationContract[]> {
+    return this.researchList<CollaborationContract>('collaboration-contracts', f);
+  }
+
+  async createCollaborationContract(body: Partial<CollaborationContract>): Promise<CollaborationContract> {
+    return this.researchCreate<CollaborationContract>('collaboration-contracts', body as Record<string, unknown>);
+  }
+
+  async updateCollaborationContract(id: string, body: Partial<CollaborationContract>): Promise<CollaborationContract> {
+    return this.researchUpdate<CollaborationContract>('collaboration-contracts', id, body as Record<string, unknown>);
+  }
+
+  async domainInsights(f: { area?: string } = {}): Promise<DomainInsight[]> {
+    return this.researchList<DomainInsight>('domain-insights', f);
+  }
+
+  async createDomainInsight(body: Partial<DomainInsight>): Promise<DomainInsight> {
+    return this.researchCreate<DomainInsight>('domain-insights', body as Record<string, unknown>);
+  }
+
+  async deleteDomainInsight(id: string): Promise<unknown> {
+    return this.researchDelete('domain-insights', id);
+  }
+
+  async publications(f: { area?: string } = {}): Promise<ResearchPublication[]> {
+    return this.researchList<ResearchPublication>('publications', f);
+  }
+
+  async createPublication(body: Partial<ResearchPublication>): Promise<ResearchPublication> {
+    return this.researchCreate<ResearchPublication>('publications', body as Record<string, unknown>);
+  }
+
+  async updatePublication(id: string, body: Partial<ResearchPublication>): Promise<ResearchPublication> {
+    return this.researchUpdate<ResearchPublication>('publications', id, body as Record<string, unknown>);
   }
 
   async uploadPaperPdf(id: string, file: File): Promise<Paper> {
@@ -1051,4 +1155,17 @@ export class LayertoClient {
   }
 }
 
-export type ResearchKind = 'papers' | 'experiments' | 'findings' | 'notes' | 'literature' | 'tasks';
+export type ResearchKind =
+  | 'papers'
+  | 'experiments'
+  | 'findings'
+  | 'notes'
+  | 'literature'
+  | 'tasks'
+  | 'specimens'
+  | 'dataset-splits'
+  | 'ablation-runs'
+  | 'arena-items'
+  | 'collaboration-contracts'
+  | 'domain-insights'
+  | 'publications';

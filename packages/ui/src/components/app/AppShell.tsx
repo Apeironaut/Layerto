@@ -34,6 +34,10 @@ export interface AppShellProps {
   fullBleed?: boolean;
   /** Narrow icon-only sidebar, for wide tools like the workflow editor. */
   compactNav?: boolean;
+  /** Optional custom class name for the <main> element */
+  mainClassName?: string;
+  /** Optional custom class name for the animated content wrapper */
+  contentClassName?: string;
   children: ReactNode;
 }
 
@@ -148,6 +152,8 @@ export function AppShell({
   toolbar,
   fullBleed = false,
   compactNav = false,
+  mainClassName,
+  contentClassName,
   children,
 }: AppShellProps) {
   const reduced = useReducedMotion();
@@ -263,11 +269,19 @@ export function AppShell({
         </div>
       </header>
 
-      <main className={cn('flex-1 min-w-0 flex flex-col', fullBleed ? 'p-0 pb-16 md:pb-0' : 'px-4 sm:px-6 lg:px-8 py-6 pb-28 md:pb-8')}>
+      <main
+        className={cn(
+          'flex-1 min-w-0 flex flex-col',
+          mainClassName ?? (fullBleed ? 'p-0 pb-16 md:pb-0' : 'px-4 sm:px-6 lg:px-8 py-6 pb-28 md:pb-8'),
+        )}
+      >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={activePath}
-            className={cn('w-full', fullBleed ? 'h-full flex-1 flex flex-col' : 'space-y-6 max-w-[1600px] mx-auto')}
+            className={cn(
+              'w-full',
+              contentClassName ?? (fullBleed ? 'h-full flex-1 flex flex-col' : 'space-y-6 max-w-[1600px] mx-auto'),
+            )}
             initial={reduced ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reduced ? undefined : { opacity: 0, y: -6 }}

@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Icon } from './Icon';
 
 export interface ModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
+  open?: boolean;
   onClose: () => void;
   title: string;
   description?: ReactNode;
@@ -19,13 +20,14 @@ export interface ModalProps {
 const SIZES = { md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' } as const;
 
 /** Layer-3 dialog: focus moves inside on open and returns on close; Escape closes. */
-export function Modal({ isOpen, onClose, title, description, children, dismissable = true, size = 'md' }: ModalProps) {
+export function Modal({ isOpen, open, onClose, title, description, children, dismissable = true, size = 'md' }: ModalProps) {
+  const isModalOpen = isOpen ?? open ?? false;
   const titleId = useId();
   const descId = useId();
   const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isModalOpen) return;
     const previous = document.activeElement as HTMLElement | null;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -40,11 +42,11 @@ export function Modal({ isOpen, onClose, title, description, children, dismissab
       window.removeEventListener('keydown', onKey);
       previous?.focus?.();
     };
-  }, [isOpen, onClose, dismissable]);
+  }, [isModalOpen, onClose, dismissable]);
 
   const modalContent = (
     <AnimatePresence>
-      {isOpen && (
+      {isModalOpen && (
         <motion.div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 dark:bg-black/75 backdrop-blur-md"
           initial={{ opacity: 0 }}

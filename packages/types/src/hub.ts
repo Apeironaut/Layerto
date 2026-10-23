@@ -207,6 +207,15 @@ export interface Purchase {
 
 // ---- research
 
+export type ResearchDiscipline = 'zoology' | 'ecology' | 'cv_ai' | 'biomedical' | 'interdisciplinary';
+export type WorkspaceViewMode = 'domain' | 'tech' | 'unified';
+
+export interface ResearchMetricCol {
+  key: string;
+  label: string;
+  unit: string;
+}
+
 export interface ResearchArea {
   id: string;
   owner_id: string;
@@ -218,14 +227,139 @@ export interface ResearchArea {
   color: string;
   status: 'active' | 'paused' | 'archived';
   is_public: boolean;
+  discipline: ResearchDiscipline;
+  hypothesis: string;
+  reproducibility_lock: boolean;
+  creator_id: string;
+  storage_bytes_used: number;
+  storage_quota_bytes: number;
+  gpu_seconds_used: number;
+  gpu_credits_budget: number;
+  gpu_credits_used: number;
+  custom_metrics: ResearchMetricCol[];
+  isolation_level: string;
   role: 'owner' | 'editor' | 'viewer';
   papers: number;
   experiments: number;
   findings: number;
   notes: number;
   open_tasks: number;
+  specimens: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface SpecimenItem extends Owned {
+  updated_at?: string;
+  title: string;
+  taxonomy_species: string;
+  common_name: string;
+  media_url: string;
+  media_type: 'photo' | 'video' | 'audio';
+  gps_lat: number | null;
+  gps_lng: number | null;
+  habitat: string;
+  morphometrics: Record<string, any>;
+  observation_date: string;
+  notes: string;
+}
+
+export interface LeakageSample {
+  sample_a: string;
+  sample_b: string;
+  split_a: string;
+  split_b: string;
+  similarity_score: number;
+  issue: string;
+}
+
+export interface DatasetSplitSnapshot extends Owned {
+  version_tag: string;
+  description: string;
+  total_samples: number;
+  train_count: number;
+  val_count: number;
+  test_count: number;
+  class_distribution: Record<string, number>;
+  leakage_detected: boolean;
+  leakage_details: LeakageSample[];
+}
+
+export interface AblationRun extends Owned {
+  run_name: string;
+  architecture: string;
+  is_baseline: boolean;
+  hyperparameters: Record<string, any>;
+  metrics: Record<string, any>;
+  status: 'planned' | 'running' | 'completed' | 'failed';
+  notes: string;
+}
+
+export interface ArenaItem {
+  id: string;
+  owner_id: string;
+  area_id: string;
+  specimen_id: string | null;
+  image_url: string;
+  sample_name: string;
+  ground_truth: Record<string, any>;
+  model_a_prediction: Record<string, any>;
+  model_b_prediction: Record<string, any>;
+  failure_category: 'agreement' | 'false_positive' | 'disagreement' | 'boundary_uncertainty';
+  difficulty: 'easy' | 'medium' | 'hard';
+  created_at: string;
+}
+
+export interface CollaborationContract {
+  id: string;
+  owner_id: string;
+  area_id: string;
+  collaborator_email: string;
+  collaborator_name: string;
+  team_name: string;
+  collaboration_model: 'voluntary_credit' | 'royalty_split' | 'paid_bounty';
+  credit_roles: string[];
+  royalty_percentage: number;
+  bounty_amount_cents: number;
+  bounty_status: 'pending' | 'escrow_funded' | 'completed' | 'paid';
+  data_sandbox_permission: 'compute_only' | 'download_permitted';
+  role?: 'owner' | 'editor' | 'viewer';
+  status: 'active' | 'pending' | 'completed';
+  created_at: string;
+}
+
+export interface DomainInsight {
+  id: string;
+  owner_id: string;
+  area_id: string;
+  title: string;
+  insight_type: 'model_accuracy' | 'population_trend' | 'morphometric_distribution' | 'detection_summary';
+  content: string;
+  chart_data: Record<string, any>;
+  pinned: boolean;
+  created_at: string;
+}
+
+export interface RoyaltySplitRule {
+  party: string;
+  share_pct: number;
+}
+
+export interface ResearchPublication extends Owned {
+  updated_at?: string;
+  title: string;
+  doi: string;
+  abstract: string;
+  pdf_url: string;
+  pricing_model: 'open_access' | 'tiered' | 'commercial';
+  paper_price_cents: number;
+  dataset_price_cents: number;
+  model_price_cents: number;
+  royalty_split_rules: RoyaltySplitRule[];
+  downloads_count: number;
+  gross_revenue_cents: number;
+  is_published: boolean;
+  badges: string[];
 }
 
 interface Owned {
@@ -340,8 +474,20 @@ export interface ResearchOverview {
   recent_experiments: Experiment[];
   storage_bytes: number;
   storage_limit_bytes: number;
-  gpu_hours: number;
+  storage_allocated_bytes: number;
+  storage_unallocated_bytes: number;
+  gpu_credits: number;
+  gpu_credits_limit: number;
+  gpu_credits_allocated: number;
+  gpu_credits_used: number;
+  gpu_hours?: number;
   plan: string;
+}
+
+export interface AreaAllocationInput {
+  area_id: string;
+  storage_quota_bytes: number;
+  gpu_credits_budget: number;
 }
 
 export interface PortfolioSettings {

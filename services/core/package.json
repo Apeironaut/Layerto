@@ -2,6 +2,6 @@
   "name": "@layerto/core",
   "private": true,
   "scripts": {
-    "dev": "go run cmd/core/main.go"
+    "dev": "command -v go >/dev/null 2>&1 && go run cmd/core/main.go || /usr/local/go/bin/go run cmd/core/main.go"
   }
 }

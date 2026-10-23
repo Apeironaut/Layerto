@@ -181,10 +181,12 @@ export function SignedInApp({ user, balance, balanceLoading, reloadBalance, onSi
   const annotate = path.match(new RegExp(`^/datasets/(${UUID})/annotate/?$`));
   const datasetMatch = path.match(new RegExp(`^/datasets/(${UUID})/?$`));
   const projectMatch = path.match(new RegExp(`^/projects/(${UUID})(?:/([a-z]+))?/?$`));
-  const researchMatch = path.match(/^\/research(?:\/([a-z]+))?\/?$/);
+  const researchAreaMatch = path.match(new RegExp(`^/research/area/(${UUID})(?:/([a-z-]+))?/?$`));
+  const researchMatch = path.match(/^\/research(?:\/([a-z-]+))?\/?$/);
   const marketMatch = path.match(new RegExp(`^/marketplace(?:/([a-z]+))?(?:/(${UUID}))?/?$`));
   const teamMatch = path.match(new RegExp(`^/teams/(${UUID})/?$`));
   const fullBleed = wfMatch !== null || annotate !== null;
+  const isResearch = path.startsWith('/research');
   const gate = (feature: string, el: ReactElement) => (plan.data && !has(feature) ? <Locked feature={feature} /> : el);
 
   let page: ReactElement;
@@ -198,8 +200,10 @@ export function SignedInApp({ user, balance, balanceLoading, reloadBalance, onSi
   } else if (wfMatch) {
     const editorId = !wfMatch[1].startsWith('new') ? wfMatch[1] : undefined;
     page = <WorkflowEditorPage key={path} workflowId={editorId} templateId={wfMatch[2]} navigate={navigate} onCharged={reloadBalance} />;
+  } else if (researchAreaMatch) {
+    page = gate('research', <ResearchPage areaId={researchAreaMatch[1]} tab={researchAreaMatch[2]} />);
   } else if (researchMatch) {
-    page = gate('research', <ResearchPage tab={researchMatch[1] ?? 'overview'} />);
+    page = gate('research', <ResearchPage tab={researchMatch[1]} />);
   } else if (marketMatch) {
     page = <MarketplacePage tab={marketMatch[1] ?? 'models'} listingId={marketMatch[2]} />;
   } else if (teamMatch) {
@@ -317,6 +321,8 @@ export function SignedInApp({ user, balance, balanceLoading, reloadBalance, onSi
         }
         fullBleed={fullBleed}
         compactNav={fullBleed}
+        mainClassName={isResearch ? 'pl-2 pr-4 sm:pr-6 lg:pr-8 py-4 sm:py-6 pb-28 md:pb-8' : undefined}
+        contentClassName={isResearch ? 'space-y-6 w-full max-w-full' : undefined}
       >
         <Suspense fallback={<PageFallback />}>{page}</Suspense>
       </AppShell>

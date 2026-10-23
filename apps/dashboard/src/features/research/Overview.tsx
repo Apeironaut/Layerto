@@ -118,11 +118,13 @@ export function ResearchOverview() {
                 </div>
                 <div className="flex items-center justify-between rounded-control bg-page p-3">
                   <div>
-                    <div className="text-xs text-muted">Prepaid GPU time</div>
-                    <div className="text-xl font-bold tabular-nums">{d.gpu_hours.toFixed(1)} h</div>
+                    <div className="text-xs text-muted">Prepaid GPU Credits</div>
+                    <div className="text-xl font-bold tabular-nums">
+                      {(d.gpu_credits_limit ?? Math.round((d.gpu_hours ?? 0) * 100)).toLocaleString()} cr
+                    </div>
                   </div>
                   <Button size="sm" variant="secondary" icon="zap" onClick={() => openPlan('gpu')}>
-                    Buy GPU hours
+                    Buy GPU Credits
                   </Button>
                 </div>
               </div>

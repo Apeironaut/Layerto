@@ -23,41 +23,68 @@ import (
 // ---- research areas
 
 type area struct {
-	ID          string  `json:"id"`
-	OwnerID     string  `json:"owner_id"`
-	Owner       string  `json:"owner"`
-	TeamID      *string `json:"team_id"`
-	TeamName    string  `json:"team_name"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Color       string  `json:"color"`
-	Status      string  `json:"status"`
-	IsPublic    bool    `json:"is_public"`
-	Role        string  `json:"role"` // owner, editor, viewer
-	Papers      int     `json:"papers"`
-	Experiments int     `json:"experiments"`
-	Findings    int     `json:"findings"`
-	Notes       int     `json:"notes"`
-	OpenTasks   int     `json:"open_tasks"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
+	ID                  string          `json:"id"`
+	OwnerID             string          `json:"owner_id"`
+	Owner               string          `json:"owner"`
+	TeamID              *string         `json:"team_id"`
+	TeamName            string          `json:"team_name"`
+	Name                string          `json:"name"`
+	Description         string          `json:"description"`
+	Color               string          `json:"color"`
+	Status              string          `json:"status"`
+	IsPublic            bool            `json:"is_public"`
+	Discipline          string          `json:"discipline"`
+	Hypothesis          string          `json:"hypothesis"`
+	ReproducibilityLock bool            `json:"reproducibility_lock"`
+	StorageBytesUsed    int64           `json:"storage_bytes_used"`
+	StorageQuotaBytes   int64           `json:"storage_quota_bytes"`
+	GpuSecondsUsed      int64           `json:"gpu_seconds_used"`
+	GpuCreditsBudget    int64           `json:"gpu_credits_budget"`
+	GpuCreditsUsed      int64           `json:"gpu_credits_used"`
+	CreatorID           string          `json:"creator_id"`
+	CustomMetrics       json.RawMessage `json:"custom_metrics"`
+	IsolationLevel      string          `json:"isolation_level"`
+	Role                string          `json:"role"` // owner, editor, viewer
+	Papers              int             `json:"papers"`
+	Experiments         int             `json:"experiments"`
+	Findings            int             `json:"findings"`
+	Notes               int             `json:"notes"`
+	OpenTasks           int             `json:"open_tasks"`
+	Specimens           int             `json:"specimens"`
+	CreatedAt           string          `json:"created_at"`
+	UpdatedAt           string          `json:"updated_at"`
 }
 
 const areaCols = `ra.id::text, ra.owner_id::text, COALESCE(up.username, ''), ra.team_id::text, COALESCE(t.name, ''), ra.name, ra.description,
-	ra.color, ra.status, ra.is_public, ra.created_at, ra.updated_at,
-	CASE WHEN ra.owner_id = $1 THEN 'owner' ELSE COALESCE((SELECT CASE WHEN m.role = 'viewer' THEN 'viewer' ELSE 'editor' END
+	ra.color, ra.status, ra.is_public, COALESCE(ra.discipline, 'zoology'), COALESCE(ra.hypothesis, ''), COALESCE(ra.reproducibility_lock, false),
+	COALESCE(ra.storage_bytes_used, 0)::bigint, COALESCE(ra.gpu_seconds_used, 0)::bigint, COALESCE(ra.custom_metrics, '[]'::jsonb), COALESCE(ra.isolation_level, 'air_gapped'),
+	ra.created_at, ra.updated_at,
+	CASE WHEN ra.owner_id = $1 OR ra.creator_id = $1 THEN 'owner' ELSE COALESCE((SELECT CASE WHEN m.role = 'viewer' THEN 'viewer' ELSE 'editor' END
 		FROM team_members m WHERE m.team_id = ra.team_id AND m.user_id = $1 AND m.status = 'active'), 'viewer') END,
 	(SELECT count(*) FROM papers x WHERE x.area_id = ra.id), (SELECT count(*) FROM experiments x WHERE x.area_id = ra.id),
 	(SELECT count(*) FROM findings x WHERE x.area_id = ra.id), (SELECT count(*) FROM research_notes x WHERE x.area_id = ra.id),
-	(SELECT count(*) FROM research_tasks x WHERE x.area_id = ra.id AND NOT x.done)
+	(SELECT count(*) FROM research_tasks x WHERE x.area_id = ra.id AND NOT x.done),
+	(SELECT count(*) FROM research_specimens x WHERE x.area_id = ra.id),
+	COALESCE(ra.creator_id, ra.owner_id)::text,
+	COALESCE(ra.storage_quota_bytes, 0)::bigint,
+	COALESCE(ra.gpu_credits_budget, 0)::bigint,
+	COALESCE(ra.gpu_credits_used, 0)::bigint
 	FROM research_areas ra LEFT JOIN user_profiles up ON up.user_id = ra.owner_id LEFT JOIN teams t ON t.id = ra.team_id`
 
 func scanArea(row pgx.Row) (area, error) {
 	var a area
 	var c, u time.Time
-	err := row.Scan(&a.ID, &a.OwnerID, &a.Owner, &a.TeamID, &a.TeamName, &a.Name, &a.Description, &a.Color, &a.Status, &a.IsPublic, &c, &u,
-		&a.Role, &a.Papers, &a.Experiments, &a.Findings, &a.Notes, &a.OpenTasks)
+	var cm []byte
+	err := row.Scan(&a.ID, &a.OwnerID, &a.Owner, &a.TeamID, &a.TeamName, &a.Name, &a.Description, &a.Color, &a.Status, &a.IsPublic,
+		&a.Discipline, &a.Hypothesis, &a.ReproducibilityLock, &a.StorageBytesUsed, &a.GpuSecondsUsed, &cm, &a.IsolationLevel,
+		&c, &u, &a.Role, &a.Papers, &a.Experiments, &a.Findings, &a.Notes, &a.OpenTasks, &a.Specimens,
+		&a.CreatorID, &a.StorageQuotaBytes, &a.GpuCreditsBudget, &a.GpuCreditsUsed)
 	a.CreatedAt, a.UpdatedAt = ts(c), ts(u)
+	if len(cm) > 0 {
+		a.CustomMetrics = cm
+	} else {
+		a.CustomMetrics = json.RawMessage("[]")
+	}
 	return a, err
 }
 
@@ -85,12 +112,16 @@ func (h *Handler) HandleListAreas(w http.ResponseWriter, r *http.Request) {
 }
 
 type areaInput struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	Color       *string `json:"color"`
-	Status      *string `json:"status"`
-	IsPublic    *bool   `json:"is_public"`
-	TeamID      *string `json:"team_id"`
+	Name                *string         `json:"name"`
+	Description         *string         `json:"description"`
+	Color               *string         `json:"color"`
+	Status              *string         `json:"status"`
+	IsPublic            *bool           `json:"is_public"`
+	Discipline          *string         `json:"discipline"`
+	Hypothesis          *string         `json:"hypothesis"`
+	ReproducibilityLock *bool           `json:"reproducibility_lock"`
+	CustomMetrics       json.RawMessage `json:"custom_metrics"`
+	TeamID              *string         `json:"team_id"`
 }
 
 var hexColorRe = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
@@ -107,6 +138,9 @@ func (in *areaInput) validate() string {
 	}
 	if in.Status != nil && *in.Status != "active" && *in.Status != "paused" && *in.Status != "archived" {
 		return "Status must be active, paused or archived"
+	}
+	if in.Hypothesis != nil && len([]rune(*in.Hypothesis)) > 4000 {
+		return "Hypothesis is too long (4000 characters max)"
 	}
 	return ""
 }
@@ -125,7 +159,7 @@ func (h *Handler) HandleCreateArea(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in areaInput
-	if !decodeJSON(w, r, &in, 8<<10) {
+	if !decodeJSON(w, r, &in, 32<<10) {
 		return
 	}
 	if in.Name == nil {
@@ -148,10 +182,22 @@ func (h *Handler) HandleCreateArea(w http.ResponseWriter, r *http.Request) {
 	if in.Color != nil {
 		color = *in.Color
 	}
+	discipline := "zoology"
+	if in.Discipline != nil && *in.Discipline != "" {
+		discipline = *in.Discipline
+	}
+	hypothesis := ""
+	if in.Hypothesis != nil {
+		hypothesis = *in.Hypothesis
+	}
+	var cm any = []byte("[]")
+	if len(in.CustomMetrics) > 0 {
+		cm = in.CustomMetrics
+	}
 	var id string
-	err := h.pool.QueryRow(r.Context(), `INSERT INTO research_areas (owner_id, team_id, name, description, color, status, is_public)
-		VALUES ($1, $2::uuid, $3, $4, $5, COALESCE($6, 'active'), COALESCE($7, false)) RETURNING id::text`,
-		uid, team, strings.TrimSpace(*in.Name), deref(in.Description), color, in.Status, in.IsPublic).Scan(&id)
+	err := h.pool.QueryRow(r.Context(), `INSERT INTO research_areas (owner_id, creator_id, team_id, name, description, color, status, is_public, discipline, hypothesis, custom_metrics)
+		VALUES ($1, $1, $2::uuid, $3, $4, $5, COALESCE($6, 'active'), COALESCE($7, false), $8, $9, $10::jsonb) RETURNING id::text`,
+		uid, team, strings.TrimSpace(*in.Name), deref(in.Description), color, in.Status, in.IsPublic, discipline, hypothesis, cm).Scan(&id)
 	if err != nil {
 		internal(w, r, err)
 		return
@@ -222,10 +268,18 @@ func (h *Handler) HandleUpdateArea(w http.ResponseWriter, r *http.Request) {
 			team = *in.TeamID
 		}
 	}
+	var cm any = nil
+	if len(in.CustomMetrics) > 0 {
+		cm = in.CustomMetrics
+	}
 	if _, err := h.pool.Exec(ctx, `UPDATE research_areas SET name = COALESCE($2, name), description = COALESCE($3, description),
 		color = COALESCE($4, color), status = COALESCE($5, status), is_public = COALESCE($6, is_public),
-		team_id = CASE WHEN $7 THEN $8::uuid ELSE team_id END, updated_at = now() WHERE id = $1`,
-		id, trimPtr(in.Name), trimPtr(in.Description), in.Color, in.Status, in.IsPublic, setTeam, team); err != nil {
+		discipline = COALESCE($7, discipline), hypothesis = COALESCE($8, hypothesis),
+		reproducibility_lock = COALESCE($9, reproducibility_lock),
+		custom_metrics = CASE WHEN $10::jsonb IS NOT NULL THEN $10::jsonb ELSE custom_metrics END,
+		team_id = CASE WHEN $11 THEN $12::uuid ELSE team_id END, updated_at = now() WHERE id = $1`,
+		id, trimPtr(in.Name), trimPtr(in.Description), in.Color, in.Status, in.IsPublic,
+		in.Discipline, in.Hypothesis, in.ReproducibilityLock, cm, setTeam, team); err != nil {
 		internal(w, r, err)
 		return
 	}
@@ -297,13 +351,118 @@ func (h *Handler) HandleResearchOverview(w http.ResponseWriter, r *http.Request)
 	u, _ := h.usage(ctx, uid)
 	var gpuSeconds int64
 	_ = h.pool.QueryRow(ctx, `SELECT seconds FROM gpu_credits WHERE user_id = $1`, uid).Scan(&gpuSeconds)
+	var allocatedStorage, allocatedGpuCredits, usedGpuCredits int64
+	_ = h.pool.QueryRow(ctx, `SELECT COALESCE(SUM(storage_quota_bytes), 0), COALESCE(SUM(gpu_credits_budget), 0), COALESCE(SUM(gpu_credits_used), 0)
+		FROM research_areas WHERE (owner_id = $1 OR creator_id = $1) AND status <> 'archived'`, uid).Scan(&allocatedStorage, &allocatedGpuCredits, &usedGpuCredits)
+	storageLimit := int64(info.Plan.StorageMB) << 20
+	storageUnallocated := storageLimit - allocatedStorage
+	if storageUnallocated < 0 {
+		storageUnallocated = 0
+	}
+	gpuCreditsLimit := gpuSeconds / 36
+	gpuCreditsUnallocated := gpuCreditsLimit - allocatedGpuCredits
+	if gpuCreditsUnallocated < 0 {
+		gpuCreditsUnallocated = 0
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"areas": areas, "papers": papers, "papers_published": published, "papers_in_review": inReview,
 		"experiments": exps, "experiments_running": running, "findings": findings, "notes": notes,
 		"to_read": toRead, "open_tasks": openTasks, "upcoming": upcoming, "recent_experiments": recent,
-		"storage_bytes": u.StorageBytes, "storage_limit_bytes": info.Plan.StorageMB << 20,
-		"gpu_hours": math.Round(float64(gpuSeconds)/36) / 100, "plan": info.Plan.Name,
+		"storage_bytes":             u.StorageBytes,
+		"storage_limit_bytes":       storageLimit,
+		"storage_allocated_bytes":   allocatedStorage,
+		"storage_unallocated_bytes": storageUnallocated,
+		"gpu_credits":               gpuCreditsLimit - usedGpuCredits,
+		"gpu_credits_limit":         gpuCreditsLimit,
+		"gpu_credits_allocated":     allocatedGpuCredits,
+		"gpu_credits_used":          usedGpuCredits,
+		"gpu_hours":                 math.Round(float64(gpuSeconds)/36) / 100,
+		"plan":                      info.Plan.Name,
 	})
+}
+
+type allocationItem struct {
+	AreaID            string `json:"area_id"`
+	StorageQuotaBytes int64  `json:"storage_quota_bytes"`
+	GpuCreditsBudget  int64  `json:"gpu_credits_budget"`
+}
+
+type updateAllocationsPayload struct {
+	Allocations []allocationItem `json:"allocations"`
+}
+
+func (h *Handler) HandleUpdateAllocations(w http.ResponseWriter, r *http.Request) {
+	uid, ok := currentUser(w, r)
+	if !ok || !h.requireFeature(w, r, uid, "research") {
+		return
+	}
+	var in updateAllocationsPayload
+	if !decodeJSON(w, r, &in, 64<<10) {
+		return
+	}
+	ctx := r.Context()
+
+	info, err := h.userPlan(ctx, uid)
+	if err != nil {
+		internal(w, r, err)
+		return
+	}
+	storageLimit := int64(info.Plan.StorageMB) << 20
+
+	var gpuSeconds int64
+	_ = h.pool.QueryRow(ctx, `SELECT seconds FROM gpu_credits WHERE user_id = $1`, uid).Scan(&gpuSeconds)
+	gpuCreditsLimit := gpuSeconds / 36
+
+	var totalAllocatedStorage, totalAllocatedGpuCredits int64
+	for _, it := range in.Allocations {
+		if !validID(it.AreaID) {
+			httpx.WriteError(w, r, http.StatusBadRequest, "invalid_id", "Invalid area ID in allocations")
+			return
+		}
+		if it.StorageQuotaBytes < 0 || it.GpuCreditsBudget < 0 {
+			httpx.WriteError(w, r, http.StatusBadRequest, "invalid_value", "Allocations cannot be negative")
+			return
+		}
+		totalAllocatedStorage += it.StorageQuotaBytes
+		totalAllocatedGpuCredits += it.GpuCreditsBudget
+	}
+
+	if totalAllocatedStorage > storageLimit {
+		httpx.WriteError(w, r, http.StatusBadRequest, "storage_pool_exceeded",
+			fmt.Sprintf("Total allocated storage (%d GB) exceeds your global pool limit (%d GB)",
+				totalAllocatedStorage/(1<<30), storageLimit/(1<<30)))
+		return
+	}
+
+	if totalAllocatedGpuCredits > gpuCreditsLimit {
+		httpx.WriteError(w, r, http.StatusBadRequest, "gpu_pool_exceeded",
+			fmt.Sprintf("Total allocated GPU credits (%d) exceeds your available pool (%d credits)",
+				totalAllocatedGpuCredits, gpuCreditsLimit))
+		return
+	}
+
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		internal(w, r, err)
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	for _, it := range in.Allocations {
+		_, err := tx.Exec(ctx, `UPDATE research_areas SET storage_quota_bytes = $1, gpu_credits_budget = $2, updated_at = now()
+			WHERE id = $3 AND (owner_id = $4 OR creator_id = $4)`, it.StorageQuotaBytes, it.GpuCreditsBudget, it.AreaID, uid)
+		if err != nil {
+			internal(w, r, err)
+			return
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		internal(w, r, err)
+		return
+	}
+
+	h.HandleListAreas(w, r)
 }
 
 // ---- activity feed: own actions, shared areas and teams

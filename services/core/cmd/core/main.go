@@ -544,6 +544,7 @@ func runServer() {
 				active.Get("/research/overview", st.HandleResearchOverview)
 				active.Get("/research/areas", st.HandleListAreas)
 				active.Post("/research/areas", st.HandleCreateArea)
+				active.Put("/research/areas/allocations", st.HandleUpdateAllocations)
 				active.Get("/research/areas/{id}", st.HandleGetArea)
 				active.Patch("/research/areas/{id}", st.HandleUpdateArea)
 				active.Delete("/research/areas/{id}", st.HandleDeleteArea)

@@ -56,6 +56,10 @@ func (e *entity) selectCols() string {
 			cols = append(cols, fmt.Sprintf("to_char(t.%s, 'YYYY-MM-DD') AS %s", f.name, f.name))
 		case "uuid":
 			cols = append(cols, fmt.Sprintf("t.%s::text AS %s", f.name, f.name))
+		case "float":
+			cols = append(cols, fmt.Sprintf("COALESCE(t.%s, 0.0)::float8 AS %s", f.name, f.name))
+		case "int64":
+			cols = append(cols, fmt.Sprintf("COALESCE(t.%s, 0)::bigint AS %s", f.name, f.name))
 		default:
 			cols = append(cols, "t."+f.name)
 		}
@@ -99,7 +103,7 @@ func (e *entity) parseFields(in map[string]json.RawMessage, partial bool) (map[s
 			continue
 		}
 		if string(raw) == "null" {
-			if f.kind == "area" || f.kind == "date" || f.kind == "int" {
+			if f.kind == "area" || f.kind == "date" || f.kind == "int" || f.kind == "float" || f.kind == "int64" {
 				set[f.name] = nil
 				continue
 			}
@@ -152,6 +156,18 @@ func (e *entity) parseFields(in map[string]json.RawMessage, partial bool) (map[s
 				return nil, fmt.Errorf("%s must be a number from %d to %d", f.name, f.min, f.max)
 			}
 			set[f.name] = n
+		case "int64":
+			var n int64
+			if json.Unmarshal(raw, &n) != nil {
+				return nil, fmt.Errorf("%s must be a number", f.name)
+			}
+			set[f.name] = n
+		case "float":
+			var fl float64
+			if json.Unmarshal(raw, &fl) != nil {
+				return nil, fmt.Errorf("%s must be a decimal number", f.name)
+			}
+			set[f.name] = fl
 		case "bool":
 			var b bool
 			if json.Unmarshal(raw, &b) != nil {
@@ -182,7 +198,11 @@ func (h *Handler) researchList(e *entity) http.HandlerFunc {
 		}
 		q := `SELECT ` + e.selectCols() + ` WHERE ` + readScope
 		args := []any{uid}
-		switch area := r.URL.Query().Get("area"); {
+		area := r.Header.Get("X-Research-Area-ID")
+		if area == "" {
+			area = r.URL.Query().Get("area")
+		}
+		switch {
 		case area == "none":
 			q += ` AND t.area_id IS NULL`
 		case validID(area):
@@ -285,6 +305,11 @@ func (h *Handler) researchCreate(e *entity) http.HandlerFunc {
 			httpx.WriteError(w, r, http.StatusBadRequest, "invalid_field", err.Error())
 			return
 		}
+		if set["area_id"] == nil || set["area_id"] == "" {
+			if hArea := r.Header.Get("X-Research-Area-ID"); validID(hArea) {
+				set["area_id"] = hArea
+			}
+		}
 		if !h.checkAreaWrite(r.Context(), uid, set["area_id"]) {
 			httpx.WriteError(w, r, http.StatusForbidden, "area_forbidden", "You can't add to that research area")
 			return
@@ -307,6 +332,10 @@ func (h *Handler) researchCreate(e *entity) http.HandlerFunc {
 				cast = "::uuid"
 			case "date":
 				cast = "::date"
+			case "float":
+				cast = "::float8"
+			case "int64":
+				cast = "::bigint"
 			}
 			vals = append(vals, fmt.Sprintf("$%d%s", len(args), cast))
 		}
@@ -372,6 +401,15 @@ func (h *Handler) researchUpdate(e *entity) http.HandlerFunc {
 			httpx.WriteError(w, r, http.StatusForbidden, "area_forbidden", "You can't move it to that research area")
 			return
 		}
+		if e.table == "research_collaboration_contracts" {
+			var creatorID, targetRole string
+			_ = h.pool.QueryRow(r.Context(), `SELECT ra.creator_id::text, COALESCE(c.role, 'editor')
+				FROM research_collaboration_contracts c JOIN research_areas ra ON ra.id = c.area_id WHERE c.id = $1`, id).Scan(&creatorID, &targetRole)
+			if targetRole == "owner" && uid != creatorID {
+				httpx.WriteError(w, r, http.StatusForbidden, "forbidden", "Only the original research area creator can demote or alter co-owners")
+				return
+			}
+		}
 		if e.beforeUpdate != nil {
 			if err := e.beforeUpdate(r.Context(), h, id, set); err != nil {
 				httpx.WriteError(w, r, http.StatusBadRequest, "invalid_field", err.Error())
@@ -395,6 +433,10 @@ func (h *Handler) researchUpdate(e *entity) http.HandlerFunc {
 					cast = "::uuid"
 				case "date":
 					cast = "::date"
+				case "float":
+					cast = "::float8"
+				case "int64":
+					cast = "::bigint"
 				}
 				parts = append(parts, fmt.Sprintf("%s = $%d%s", f.name, len(args), cast))
 			}
@@ -441,6 +483,15 @@ func (h *Handler) researchDelete(e *entity) http.HandlerFunc {
 		if !writable {
 			notFound(w, r, capital(e.noun))
 			return
+		}
+		if e.table == "research_collaboration_contracts" {
+			var creatorID, targetRole string
+			_ = h.pool.QueryRow(r.Context(), `SELECT ra.creator_id::text, COALESCE(c.role, 'editor')
+				FROM research_collaboration_contracts c JOIN research_areas ra ON ra.id = c.area_id WHERE c.id = $1`, id).Scan(&creatorID, &targetRole)
+			if targetRole == "owner" && uid != creatorID {
+				httpx.WriteError(w, r, http.StatusForbidden, "forbidden", "Only the original research area creator can remove co-owners")
+				return
+			}
 		}
 		var title string
 		_ = h.pool.QueryRow(r.Context(), `SELECT `+e.titleField+` FROM `+e.table+` WHERE id = $1`, id).Scan(&title)
@@ -607,10 +658,136 @@ var entTasks = &entity{
 	},
 }
 
+var entSpecimens = &entity{
+	table: "research_specimens", noun: "specimen", titleField: "title", hasUpdated: true, order: "t.created_at DESC",
+	fields: []field{
+		{name: "area_id", kind: "area", required: true},
+		{name: "title", kind: "text", max: 200, required: true},
+		{name: "taxonomy_species", kind: "text", max: 200, required: true},
+		{name: "common_name", kind: "text", max: 200},
+		{name: "media_url", kind: "text", max: 1000},
+		{name: "media_type", kind: "enum", enum: []string{"photo", "video", "audio"}},
+		{name: "gps_lat", kind: "float"},
+		{name: "gps_lng", kind: "float"},
+		{name: "habitat", kind: "text", max: 500},
+		{name: "morphometrics", kind: "json", max: 16 << 10},
+		{name: "observation_date", kind: "date"},
+		{name: "notes", kind: "text", max: 10000},
+	},
+}
+
+var entDatasetSplits = &entity{
+	table: "research_dataset_splits", noun: "dataset split", titleField: "version_tag", hasUpdated: false, order: "t.created_at DESC",
+	fields: []field{
+		{name: "area_id", kind: "area", required: true},
+		{name: "version_tag", kind: "text", max: 50, required: true},
+		{name: "description", kind: "text", max: 2000},
+		{name: "total_samples", kind: "int", min: 0, max: 100000000},
+		{name: "train_count", kind: "int", min: 0, max: 100000000},
+		{name: "val_count", kind: "int", min: 0, max: 100000000},
+		{name: "test_count", kind: "int", min: 0, max: 100000000},
+		{name: "class_distribution", kind: "json", max: 32 << 10},
+		{name: "leakage_detected", kind: "bool"},
+		{name: "leakage_details", kind: "json", max: 64 << 10},
+	},
+}
+
+var entAblationRuns = &entity{
+	table: "research_ablation_runs", noun: "ablation run", titleField: "run_name", hasUpdated: false, order: "t.created_at DESC",
+	fields: []field{
+		{name: "area_id", kind: "area", required: true},
+		{name: "run_name", kind: "text", max: 120, required: true},
+		{name: "architecture", kind: "text", max: 100, required: true},
+		{name: "is_baseline", kind: "bool"},
+		{name: "hyperparameters", kind: "json", max: 32 << 10},
+		{name: "metrics", kind: "json", max: 64 << 10},
+		{name: "status", kind: "enum", enum: []string{"planned", "running", "completed", "failed"}},
+		{name: "notes", kind: "text", max: 10000},
+	},
+}
+
+var entArenaItems = &entity{
+	table: "research_arena_items", noun: "arena item", titleField: "sample_name", hasUpdated: false, order: "t.created_at DESC",
+	fields: []field{
+		{name: "area_id", kind: "area", required: true},
+		{name: "specimen_id", kind: "area"},
+		{name: "image_url", kind: "text", max: 1000, required: true},
+		{name: "sample_name", kind: "text", max: 150, required: true},
+		{name: "ground_truth", kind: "json", max: 16 << 10},
+		{name: "model_a_prediction", kind: "json", max: 16 << 10},
+		{name: "model_b_prediction", kind: "json", max: 16 << 10},
+		{name: "failure_category", kind: "enum", enum: []string{"agreement", "false_positive", "disagreement", "boundary_uncertainty"}},
+		{name: "difficulty", kind: "enum", enum: []string{"easy", "medium", "hard"}},
+	},
+}
+
+var entCollaborationContracts = &entity{
+	table: "research_collaboration_contracts", noun: "collaboration contract", titleField: "collaborator_name", hasUpdated: false, order: "t.created_at DESC",
+	fields: []field{
+		{name: "area_id", kind: "area", required: true},
+		{name: "collaborator_email", kind: "text", max: 200, required: true},
+		{name: "collaborator_name", kind: "text", max: 120, required: true},
+		{name: "team_name", kind: "text", max: 120},
+		{name: "collaboration_model", kind: "enum", enum: []string{"voluntary_credit", "royalty_split", "paid_bounty"}, required: true},
+		{name: "credit_roles", kind: "json", max: 16 << 10},
+		{name: "royalty_percentage", kind: "float"},
+		{name: "bounty_amount_cents", kind: "int64"},
+		{name: "bounty_status", kind: "enum", enum: []string{"pending", "escrow_funded", "completed", "paid"}},
+		{name: "data_sandbox_permission", kind: "enum", enum: []string{"compute_only", "download_permitted"}},
+		{name: "role", kind: "enum", enum: []string{"owner", "editor", "viewer"}},
+		{name: "status", kind: "enum", enum: []string{"active", "pending", "completed"}},
+	},
+}
+
+var entDomainInsights = &entity{
+	table: "research_domain_insights", noun: "domain insight", titleField: "title", hasUpdated: false, order: "t.pinned DESC, t.created_at DESC",
+	fields: []field{
+		{name: "area_id", kind: "area", required: true},
+		{name: "title", kind: "text", max: 250, required: true},
+		{name: "insight_type", kind: "enum", enum: []string{"model_accuracy", "population_trend", "morphometric_distribution", "detection_summary"}},
+		{name: "content", kind: "text", max: 10000, required: true},
+		{name: "chart_data", kind: "json", max: 32 << 10},
+		{name: "pinned", kind: "bool"},
+	},
+}
+
+var entPublications = &entity{
+	table: "research_publications", noun: "publication", titleField: "title", hasUpdated: true, order: "t.created_at DESC",
+	fields: []field{
+		{name: "area_id", kind: "area", required: true},
+		{name: "title", kind: "text", max: 300, required: true},
+		{name: "doi", kind: "text", max: 200},
+		{name: "abstract", kind: "text", max: 10000},
+		{name: "pdf_url", kind: "text", max: 1000},
+		{name: "pricing_model", kind: "enum", enum: []string{"open_access", "tiered", "commercial"}},
+		{name: "paper_price_cents", kind: "int64"},
+		{name: "dataset_price_cents", kind: "int64"},
+		{name: "model_price_cents", kind: "int64"},
+		{name: "royalty_split_rules", kind: "json", max: 16 << 10},
+		{name: "downloads_count", kind: "int", min: 0, max: 100000000},
+		{name: "gross_revenue_cents", kind: "int64"},
+		{name: "is_published", kind: "bool"},
+		{name: "badges", kind: "json", max: 8 << 10},
+	},
+}
+
 // ResearchEntities maps URL segments to the generic research entities (for route registration).
 func (h *Handler) ResearchEntities() map[string]*entity {
-	return map[string]*entity{"papers": entPapers, "experiments": entExperiments, "findings": entFindings,
-		"notes": entNotes, "literature": entLiterature, "tasks": entTasks}
+	return map[string]*entity{
+		"papers":                  entPapers,
+		"experiments":             entExperiments,
+		"findings":                entFindings,
+		"notes":                   entNotes,
+		"literature":              entLiterature,
+		"tasks":                   entTasks,
+		"specimens":               entSpecimens,
+		"dataset-splits":          entDatasetSplits,
+		"ablation-runs":           entAblationRuns,
+		"arena-items":             entArenaItems,
+		"collaboration-contracts": entCollaborationContracts,
+		"domain-insights":         entDomainInsights,
+		"publications":            entPublications,
+	}
 }
 
 func (h *Handler) FilesEntity() *entity { return entFiles }
