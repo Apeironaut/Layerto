@@ -73,60 +73,64 @@ export function RuledSheetReaderModal({
   const hasPrevious = currentNoteIndex > 0;
   const hasNext = currentNoteIndex < notes.length - 1;
 
-  // Simple clean body renderer supporting markdown headings, bullet points, quotes
+  // Body renderer strictly aligned to 32px notebook line rhythm
   const renderFormattedBody = (content: string) => {
     const lines = content.split('\n');
     return (
-      <div className="space-y-1 text-sm text-ink font-sans leading-[32px]">
+      <div className="text-[14px] text-ink font-sans leading-[32px] py-0 select-text">
         {lines.map((line, idx) => {
           const trimmed = line.trim();
           if (trimmed.startsWith('### ')) {
             return (
-              <h4 key={idx} className="font-bold text-base text-ink pt-1.5 pb-0.5 border-b border-line/40">
+              <h4 key={idx} className="font-bold text-[15px] text-indigo-600 dark:text-indigo-400 leading-[32px] m-0 p-0">
                 {trimmed.slice(4)}
               </h4>
             );
           }
           if (trimmed.startsWith('## ')) {
             return (
-              <h3 key={idx} className="font-bold text-lg text-ink pt-2 pb-1 border-b border-line/40">
+              <h3 key={idx} className="font-bold text-base text-crimson leading-[32px] m-0 p-0">
                 {trimmed.slice(3)}
               </h3>
             );
           }
           if (trimmed.startsWith('> [!NOTE]')) {
             return (
-              <div key={idx} className="my-1.5 rounded-control border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs text-blue-900 dark:text-blue-200 font-medium">
-                💡 Note / Key Observation
+              <div key={idx} className="leading-[32px] font-semibold text-xs text-blue-600 dark:text-blue-400 m-0 p-0">
+                💡 NOTE: {trimmed.replace('> [!NOTE]', '').trim() || 'Key Observation'}
               </div>
             );
           }
           if (trimmed.startsWith('> ')) {
             return (
-              <blockquote key={idx} className="border-l-2 border-crimson pl-3 italic text-ink/85 my-1">
+              <blockquote key={idx} className="border-l-2 border-crimson pl-2 italic text-ink/85 leading-[32px] m-0 p-0">
                 {trimmed.slice(2)}
               </blockquote>
             );
           }
           if (/^\d+\.\s/.test(trimmed)) {
             return (
-              <div key={idx} className="pl-2 font-medium">
+              <div key={idx} className="pl-2 font-medium leading-[32px] m-0 p-0">
                 {trimmed}
               </div>
             );
           }
           if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
             return (
-              <div key={idx} className="pl-4 flex items-center gap-2">
+              <div key={idx} className="pl-3 flex items-center gap-2 leading-[32px] m-0 p-0">
                 <span className="size-1.5 rounded-full bg-crimson shrink-0" />
                 <span>{trimmed.slice(2)}</span>
               </div>
             );
           }
           if (trimmed === '') {
-            return <div key={idx} className="h-6" />;
+            return <div key={idx} className="h-[32px] leading-[32px]" />;
           }
-          return <p key={idx}>{line}</p>;
+          return (
+            <p key={idx} className="m-0 p-0 leading-[32px] break-words">
+              {line}
+            </p>
+          );
         })}
       </div>
     );
@@ -191,23 +195,9 @@ export function RuledSheetReaderModal({
           </div>
 
           {/* AUTHENTIC RULED PAPER SHEET VIEWER */}
-          <div
-            className="relative rounded-l1 border border-line overflow-hidden shadow-inner"
-            style={{
-              backgroundColor: 'var(--color-card, #ffffff)',
-              backgroundImage: `
-                linear-gradient(to right, transparent 52px, rgba(239, 68, 68, 0.35) 52px, rgba(239, 68, 68, 0.35) 54px, transparent 54px),
-                repeating-linear-gradient(
-                  transparent,
-                  transparent 31px,
-                  rgba(99, 102, 241, 0.12) 31px,
-                  rgba(99, 102, 241, 0.12) 32px
-                )
-              `,
-            }}
-          >
+          <div className="relative rounded-l1 border border-line overflow-hidden shadow-inner bg-card">
             {/* Header Information Strip */}
-            <div className="flex flex-wrap items-center justify-between border-b border-line/60 bg-page/40 px-4 py-2 text-xs font-mono">
+            <div className="flex flex-wrap items-center justify-between border-b-2 border-line/80 bg-page/60 px-5 py-2.5 text-xs font-mono">
               <div className="flex items-center gap-2">
                 <span className="rounded bg-crimson/10 px-2.5 py-0.5 font-bold text-crimson border border-crimson/20">
                   ENTRY #{entryNumFormatted}
@@ -226,15 +216,27 @@ export function RuledSheetReaderModal({
               </div>
             </div>
 
-            {/* Note Title */}
-            <div className="pt-3 px-4 pl-[66px] border-b border-dashed border-line/60 pb-2">
-              <h2 className="text-xl font-extrabold text-ink tracking-tight">
+            {/* Note Title Header Box */}
+            <div className="px-5 pl-[64px] py-3 border-b border-line/60 bg-page/20">
+              <h2 className="text-lg font-extrabold text-ink tracking-tight m-0">
                 {note.title}
               </h2>
             </div>
 
-            {/* Formatted Ruled Note Body */}
-            <div className="px-4 pl-[66px] py-4 min-h-[220px]">
+            {/* Formatted Ruled Note Body - Words fit precisely on 32px ruled lines with -8px baseline */}
+            <div
+              className="relative px-5 pl-[64px] py-0 min-h-[300px]"
+              style={{
+                backgroundColor: 'var(--color-card, #ffffff)',
+                backgroundImage: `
+                  linear-gradient(to right, transparent 48px, rgba(239, 68, 68, 0.45) 48px, rgba(239, 68, 68, 0.45) 50px, transparent 50px),
+                  linear-gradient(to bottom, transparent 31px, rgba(99, 102, 241, 0.22) 31px, rgba(99, 102, 241, 0.22) 32px)
+                `,
+                backgroundSize: '100% 100%, 100% 32px',
+                backgroundRepeat: 'no-repeat, repeat-y',
+                backgroundPosition: '0 0, 0 -8px',
+              }}
+            >
               {renderFormattedBody(note.body)}
             </div>
           </div>

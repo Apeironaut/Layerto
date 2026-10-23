@@ -55,6 +55,8 @@ type area struct {
 	DataTypes           json.RawMessage `json:"data_types"`
 	PrivacyShieldConfig json.RawMessage `json:"privacy_shield_config"`
 	ComplianceVaultType string          `json:"compliance_vault_type"`
+	EnabledModules      json.RawMessage `json:"enabled_modules"`
+	MethodologySteps    json.RawMessage `json:"methodology_steps"`
 	CreatedAt           string          `json:"created_at"`
 	UpdatedAt           string          `json:"updated_at"`
 }
@@ -76,18 +78,20 @@ const areaCols = `ra.id::text, ra.owner_id::text, COALESCE(up.username, ''), ra.
 	COALESCE(ra.custom_fields, '[]'::jsonb),
 	COALESCE(ra.data_types, '["Images"]'::jsonb),
 	COALESCE(ra.privacy_shield_config, '{"shield_type":"geo_privacy","enabled":true}'::jsonb),
-	COALESCE(ra.compliance_vault_type, 'permits')
+	COALESCE(ra.compliance_vault_type, 'permits'),
+	COALESCE(ra.enabled_modules, '[]'::jsonb),
+	COALESCE(ra.methodology_steps, '[]'::jsonb)
 	FROM research_areas ra LEFT JOIN user_profiles up ON up.user_id = ra.owner_id LEFT JOIN teams t ON t.id = ra.team_id`
 
 func scanArea(row pgx.Row) (area, error) {
 	var a area
 	var c, u time.Time
-	var cm, cf, dt, psc []byte
+	var cm, cf, dt, psc, em, ms []byte
 	err := row.Scan(&a.ID, &a.OwnerID, &a.Owner, &a.TeamID, &a.TeamName, &a.Name, &a.Description, &a.Color, &a.Status, &a.IsPublic,
 		&a.Discipline, &a.Hypothesis, &a.ReproducibilityLock, &a.StorageBytesUsed, &a.GpuSecondsUsed, &cm, &a.IsolationLevel,
 		&c, &u, &a.Role, &a.Papers, &a.Experiments, &a.Findings, &a.Notes, &a.OpenTasks, &a.Specimens,
 		&a.CreatorID, &a.StorageQuotaBytes, &a.GpuCreditsBudget, &a.GpuCreditsUsed,
-		&cf, &dt, &psc, &a.ComplianceVaultType)
+		&cf, &dt, &psc, &a.ComplianceVaultType, &em, &ms)
 	a.CreatedAt, a.UpdatedAt = ts(c), ts(u)
 	if len(cm) > 0 {
 		a.CustomMetrics = cm
@@ -108,6 +112,16 @@ func scanArea(row pgx.Row) (area, error) {
 		a.PrivacyShieldConfig = psc
 	} else {
 		a.PrivacyShieldConfig = json.RawMessage(`{"shield_type":"geo_privacy","enabled":true}`)
+	}
+	if len(em) > 0 {
+		a.EnabledModules = em
+	} else {
+		a.EnabledModules = json.RawMessage("[]")
+	}
+	if len(ms) > 0 {
+		a.MethodologySteps = ms
+	} else {
+		a.MethodologySteps = json.RawMessage("[]")
 	}
 	return a, err
 }
@@ -149,6 +163,8 @@ type areaInput struct {
 	DataTypes           json.RawMessage `json:"data_types"`
 	PrivacyShieldConfig json.RawMessage `json:"privacy_shield_config"`
 	ComplianceVaultType *string         `json:"compliance_vault_type"`
+	EnabledModules      json.RawMessage `json:"enabled_modules"`
+	MethodologySteps    json.RawMessage `json:"methodology_steps"`
 	TeamID              *string         `json:"team_id"`
 }
 
@@ -187,7 +203,7 @@ func (h *Handler) HandleCreateArea(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in areaInput
-	if !decodeJSON(w, r, &in, 32<<10) {
+	if !decodeJSON(w, r, &in, 64<<10) {
 		return
 	}
 	if in.Name == nil {
@@ -238,10 +254,18 @@ func (h *Handler) HandleCreateArea(w http.ResponseWriter, r *http.Request) {
 	if in.ComplianceVaultType != nil && *in.ComplianceVaultType != "" {
 		cvt = *in.ComplianceVaultType
 	}
+	var em any = []byte("[]")
+	if len(in.EnabledModules) > 0 {
+		em = in.EnabledModules
+	}
+	var ms any = []byte("[]")
+	if len(in.MethodologySteps) > 0 {
+		ms = in.MethodologySteps
+	}
 	var id string
-	err := h.pool.QueryRow(r.Context(), `INSERT INTO research_areas (owner_id, creator_id, team_id, name, description, color, status, is_public, discipline, hypothesis, custom_metrics, custom_fields, data_types, privacy_shield_config, compliance_vault_type)
-		VALUES ($1, $1, $2::uuid, $3, $4, $5, COALESCE($6, 'active'), COALESCE($7, false), $8, $9, $10::jsonb, $11::jsonb, $12::jsonb, $13::jsonb, $14) RETURNING id::text`,
-		uid, team, strings.TrimSpace(*in.Name), deref(in.Description), color, in.Status, in.IsPublic, discipline, hypothesis, cm, cf, dt, psc, cvt).Scan(&id)
+	err := h.pool.QueryRow(r.Context(), `INSERT INTO research_areas (owner_id, creator_id, team_id, name, description, color, status, is_public, discipline, hypothesis, custom_metrics, custom_fields, data_types, privacy_shield_config, compliance_vault_type, enabled_modules, methodology_steps)
+		VALUES ($1, $1, $2::uuid, $3, $4, $5, COALESCE($6, 'active'), COALESCE($7, false), $8, $9, $10::jsonb, $11::jsonb, $12::jsonb, $13::jsonb, $14, $15::jsonb, $16::jsonb) RETURNING id::text`,
+		uid, team, strings.TrimSpace(*in.Name), deref(in.Description), color, in.Status, in.IsPublic, discipline, hypothesis, cm, cf, dt, psc, cvt, em, ms).Scan(&id)
 	if err != nil {
 		internal(w, r, err)
 		return
@@ -280,7 +304,7 @@ func (h *Handler) HandleUpdateArea(w http.ResponseWriter, r *http.Request) {
 	}
 	id := chi.URLParam(r, "id")
 	var in areaInput
-	if !validID(id) || !decodeJSON(w, r, &in, 8<<10) {
+	if !validID(id) || !decodeJSON(w, r, &in, 64<<10) {
 		if !validID(id) {
 			notFound(w, r, "Research area")
 		}
@@ -328,6 +352,14 @@ func (h *Handler) HandleUpdateArea(w http.ResponseWriter, r *http.Request) {
 	if len(in.PrivacyShieldConfig) > 0 {
 		psc = in.PrivacyShieldConfig
 	}
+	var em any = nil
+	if len(in.EnabledModules) > 0 {
+		em = in.EnabledModules
+	}
+	var ms any = nil
+	if len(in.MethodologySteps) > 0 {
+		ms = in.MethodologySteps
+	}
 	if _, err := h.pool.Exec(ctx, `UPDATE research_areas SET name = COALESCE($2, name), description = COALESCE($3, description),
 		color = COALESCE($4, color), status = COALESCE($5, status), is_public = COALESCE($6, is_public),
 		discipline = COALESCE($7, discipline), hypothesis = COALESCE($8, hypothesis),
@@ -337,9 +369,11 @@ func (h *Handler) HandleUpdateArea(w http.ResponseWriter, r *http.Request) {
 		data_types = CASE WHEN $12::jsonb IS NOT NULL THEN $12::jsonb ELSE data_types END,
 		privacy_shield_config = CASE WHEN $13::jsonb IS NOT NULL THEN $13::jsonb ELSE privacy_shield_config END,
 		compliance_vault_type = COALESCE($14, compliance_vault_type),
-		team_id = CASE WHEN $15 THEN $16::uuid ELSE team_id END, updated_at = now() WHERE id = $1`,
+		enabled_modules = CASE WHEN $15::jsonb IS NOT NULL THEN $15::jsonb ELSE enabled_modules END,
+		methodology_steps = CASE WHEN $16::jsonb IS NOT NULL THEN $16::jsonb ELSE methodology_steps END,
+		team_id = CASE WHEN $17 THEN $18::uuid ELSE team_id END, updated_at = now() WHERE id = $1`,
 		id, trimPtr(in.Name), trimPtr(in.Description), in.Color, in.Status, in.IsPublic,
-		in.Discipline, in.Hypothesis, in.ReproducibilityLock, cm, cf, dt, psc, in.ComplianceVaultType, setTeam, team); err != nil {
+		in.Discipline, in.Hypothesis, in.ReproducibilityLock, cm, cf, dt, psc, in.ComplianceVaultType, em, ms, setTeam, team); err != nil {
 		internal(w, r, err)
 		return
 	}

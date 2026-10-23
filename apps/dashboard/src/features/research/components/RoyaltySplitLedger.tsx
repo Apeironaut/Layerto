@@ -3,16 +3,20 @@ import type { ResearchPublication } from '@layerto/types';
 import { Icon } from '@layerto/ui';
 
 interface RoyaltySplitLedgerProps {
-  publication: ResearchPublication;
+  publication?: ResearchPublication;
 }
 
 export function RoyaltySplitLedger({ publication }: RoyaltySplitLedgerProps) {
-  const [downloads, setDownloads] = useState<number>(publication.downloads_count || 342);
-  const [paperPrice, setPaperPrice] = useState<number>(publication.paper_price_cents / 100 || 12);
-  const [datasetPrice, setDatasetPrice] = useState<number>(publication.dataset_price_cents / 100 || 149);
+  const [downloads, setDownloads] = useState<number>(publication?.downloads_count || 342);
+  const [paperPrice, setPaperPrice] = useState<number>(
+    publication?.paper_price_cents ? publication.paper_price_cents / 100 : 12,
+  );
+  const [datasetPrice, setDatasetPrice] = useState<number>(
+    publication?.dataset_price_cents ? publication.dataset_price_cents / 100 : 149,
+  );
 
   // Default royalty rules if none set in publication
-  const rules = publication.royalty_split_rules?.length
+  const rules = publication?.royalty_split_rules?.length
     ? publication.royalty_split_rules
     : [
         { party: 'Lead Domain Researcher', share_pct: 65 },
@@ -129,7 +133,7 @@ export function RoyaltySplitLedger({ publication }: RoyaltySplitLedgerProps) {
           <Icon name="shield" size={13} className="text-emerald-500" /> Smart escrow contract ready
           & distributed via micro-USD on-chain or bank wire.
         </span>
-        <span className="font-mono text-[11px]">Contract ID: ESC-{publication.id.slice(0, 8)}</span>
+        <span className="font-mono text-[11px]">Contract ID: ESC-{publication?.id ? publication.id.slice(0, 8) : '9948a201'}</span>
       </div>
     </div>
   );

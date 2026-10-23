@@ -118,62 +118,7 @@ export function ResearchAreaPulse({ area, scopedClient, onReload }: ResearchArea
 
   return (
     <div className="space-y-6">
-      {/* 1. KEY SUMMARY COUNTERS (4 Grid Cards) */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-l2 border border-line bg-card p-4 shadow-l1 hover:border-line-strong transition-all">
-          <div className="flex items-center justify-between text-muted text-xs">
-            <span>Storage Used</span>
-            <Icon name="database" size={15} className="text-teal-500" />
-          </div>
-          <div className="mt-2 font-mono text-xl font-bold text-ink">
-            {(area.storage_bytes_used / (1024 * 1024 * 1024)).toFixed(1)} GB
-          </div>
-          <span className="text-[11px] text-muted">
-            {area.storage_quota_bytes > 0
-              ? `Quota: ${(area.storage_quota_bytes / (1024 * 1024 * 1024)).toFixed(0)} GB`
-              : 'Free Shared Pool'}
-          </span>
-        </div>
-
-        <div className="rounded-l2 border border-line bg-card p-4 shadow-l1 hover:border-line-strong transition-all">
-          <div className="flex items-center justify-between text-muted text-xs">
-            <span>GPU Credits</span>
-            <Icon name="cpu" size={15} className="text-indigo-500" />
-          </div>
-          <div className="mt-2 font-mono text-xl font-bold text-ink">
-            {(area.gpu_credits_used ?? Math.round((area.gpu_seconds_used || 0) / 36)).toLocaleString()} cr
-          </div>
-          <span className="text-[11px] text-muted">
-            {area.gpu_credits_budget > 0
-              ? `Budget: ${area.gpu_credits_budget.toLocaleString()} cr`
-              : 'Free Shared Pool'}
-          </span>
-        </div>
-
-        <div className="rounded-l2 border border-line bg-card p-4 shadow-l1 hover:border-line-strong transition-all">
-          <div className="flex items-center justify-between text-muted text-xs">
-            <span>{meta.itemPlural}</span>
-            <Icon name="image" size={15} className="text-amber-500" />
-          </div>
-          <div className="mt-2 font-mono text-xl font-bold text-ink">
-            {area.specimens || 4}
-          </div>
-          <span className="text-[11px] text-muted">Curated vault samples</span>
-        </div>
-
-        <div className="rounded-l2 border border-line bg-card p-4 shadow-l1 hover:border-line-strong transition-all">
-          <div className="flex items-center justify-between text-muted text-xs">
-            <span>Model Runs</span>
-            <Icon name="flask" size={15} className="text-purple-500" />
-          </div>
-          <div className="mt-2 font-mono text-xl font-bold text-ink">
-            {area.experiments || 4}
-          </div>
-          <span className="text-[11px] text-muted">Ablations & benchmarks</span>
-        </div>
-      </div>
-
-      {/* 2. RESEARCH HYPOTHESIS & OBJECTIVE CARD */}
+      {/* 1. RESEARCH HYPOTHESIS & OBJECTIVE CARD */}
       <div className="rounded-l2 border border-line bg-card p-5 shadow-l1 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

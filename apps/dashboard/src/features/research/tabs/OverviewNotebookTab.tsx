@@ -1,7 +1,7 @@
-import { Button, Icon, Skeleton, useResource } from '@layerto/ui';
+import { Button, Icon, useResource } from '@layerto/ui';
 import { useAreaVault } from '../ResearchAreaBoundary';
-import { ExpertVerificationQueue } from '../components/ExpertVerificationQueue';
 import { ResearchAreaPulse } from '../components/ResearchAreaPulse';
+import { MethodologyPipeline } from '../components/MethodologyPipeline';
 import { LabNotebookScratchpad } from '../components/LabNotebookScratchpad';
 import type { DomainInsight } from '@layerto/types';
 
@@ -76,16 +76,9 @@ export function OverviewNotebookTab() {
         </Button>
       </div>
 
-      {/* Human-in-the-Loop Active Labeling Flashcard Queue */}
-      <ExpertVerificationQueue
-        areaId={area.id}
-        scopedClient={scopedClient}
-        discipline={area.discipline}
-      />
-
       {/* 50% / 50% X-AXIS SPLIT (12-Column Responsive Grid) */}
       <div className="grid grid-cols-12 gap-6 items-start">
-        {/* Left Half (50% on desktop: col-span-12 lg:col-span-6) -> Research Area Pulse */}
+        {/* Left Half (50% on desktop: col-span-12 lg:col-span-6) -> Pulse & Methodology Pipeline */}
         <div className="col-span-12 lg:col-span-6 space-y-6">
           <ResearchAreaPulse
             area={area}
@@ -93,30 +86,26 @@ export function OverviewNotebookTab() {
             onReload={reloadArea}
           />
 
-          {/* Domain Insight Widgets Bridge */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="flex size-6 items-center justify-center rounded-control bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <Icon name="sparkles" size={14} />
-                </span>
-                <h3 className="text-sm font-bold text-ink">
-                  Verified Insights & Bridge Feed
-                </h3>
-              </div>
-              <span className="text-[11px] text-muted">
-                Tech team findings published to Domain Lead
-              </span>
-            </div>
+          {/* Scientific Methodology Pipeline */}
+          <MethodologyPipeline />
 
-            {insightsResource.loading ? (
-              <Skeleton className="h-24 w-full rounded-l2" />
-            ) : insights.length === 0 ? (
-              <div className="rounded-l2 border border-line bg-card p-5 text-center text-xs text-muted">
-                No published insights in this area yet. The Tech Team can publish verified model outcomes
-                directly here from the Experiments Workbench.
+          {/* Domain Insight Widgets Bridge */}
+          {insights.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-6 items-center justify-center rounded-control bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    <Icon name="sparkles" size={14} />
+                  </span>
+                  <h3 className="text-sm font-bold text-ink">
+                    Verified Insights & Bridge Feed
+                  </h3>
+                </div>
+                <span className="text-[11px] text-muted">
+                  Tech team findings published to Domain Lead
+                </span>
               </div>
-            ) : (
+
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {insights.map((ins) => (
                   <div
@@ -133,21 +122,11 @@ export function OverviewNotebookTab() {
                       </span>
                     </div>
                     <p className="text-xs text-ink-secondary leading-relaxed line-clamp-3">{ins.content}</p>
-                    {ins.chart_data && Object.keys(ins.chart_data).length > 0 && (
-                      <div className="flex items-center gap-3 pt-2 text-[10px] font-mono text-muted border-t border-line/60">
-                        {Object.entries(ins.chart_data).slice(0, 2).map(([k, v]) => (
-                          <span key={k}>
-                            <span className="text-muted">{k}: </span>
-                            <span className="font-bold text-ink">{String(v)}</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Right Half (50% on desktop: col-span-12 lg:col-span-6) -> Lab Notebook & Field Scratchpad */}

@@ -1,25 +1,32 @@
-import { useEffect, useState } from 'react';
-import { Icon } from '@layerto/ui';
+import { useEffect, useState, useMemo } from 'react';
+import { Button, Icon } from '@layerto/ui';
+import type { OptionalModuleId } from '@layerto/types';
 import { useAreaVault } from './ResearchAreaBoundary';
 import { useHub } from '../../hub/HubContext';
 import { OverviewNotebookTab } from './tabs/OverviewNotebookTab';
-import { DataSpecimenVaultTab } from './tabs/DataSpecimenVaultTab';
-import { ExperimentsArenaTab } from './tabs/ExperimentsArenaTab';
+import { LiteratureVaultTab } from './tabs/LiteratureVaultTab';
+import { ObservationsDatasetsTab } from './tabs/ObservationsDatasetsTab';
+import { PaperWriterPublishingTab } from './tabs/PaperWriterPublishingTab';
+import { GpuModelHubTab } from './tabs/GpuModelHubTab';
 import { TechCollaborationTab } from './tabs/TechCollaborationTab';
-import { PublicationsMonetizationTab } from './tabs/PublicationsMonetizationTab';
+import { StatisticalChartBuilderTab } from './tabs/StatisticalChartBuilderTab';
 import { AreaVaultSettingsTab } from './tabs/AreaVaultSettingsTab';
+import { AddToolModal } from './components/AddToolModal';
 import { getDisciplineMeta } from './templates';
 
-const WORKSPACE_TABS = [
-  { id: 'overview', label: 'Overview & Lab Notebook', icon: 'overview' },
-  { id: 'specimens', label: 'Data & Specimen Vault', icon: 'camera' },
-  { id: 'experiments', label: 'Experiments & Visual Arena', icon: 'flask' },
-  { id: 'collaboration', label: 'Tech Collaboration Hub', icon: 'team' },
-  { id: 'publications', label: 'Publications & Monetization', icon: 'coins' },
-  { id: 'settings', label: 'Area Vault Settings', icon: 'settings' },
-] as const;
+export interface TabDef {
+  id: string;
+  label: string;
+  icon: 'overview' | 'book' | 'camera' | 'pen' | 'sparkles' | 'team' | 'flask' | 'settings';
+  isModule?: boolean;
+}
 
-type WorkspaceTabId = (typeof WORKSPACE_TABS)[number]['id'];
+export const CORE_WORKSPACE_TABS: TabDef[] = [
+  { id: 'overview', label: 'Methodology & Lab Notebook', icon: 'overview' },
+  { id: 'literature', label: 'Reference Papers & Literature', icon: 'book' },
+  { id: 'observations', label: 'Observations & Datasets', icon: 'camera' },
+  { id: 'writer', label: 'AI Paper Co-Pilot & Publishing', icon: 'pen' },
+];
 
 interface AreaWorkspaceProps {
   initialTab?: string;
@@ -28,23 +35,60 @@ interface AreaWorkspaceProps {
 export function AreaWorkspace({ initialTab }: AreaWorkspaceProps) {
   const { area, viewMode, setViewMode, isScopedCollaborator } = useAreaVault();
   const { navigate } = useHub();
+  const [isAddToolModalOpen, setIsAddToolModalOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<WorkspaceTabId>(() => {
-    const valid = WORKSPACE_TABS.some((t) => t.id === initialTab);
-    return valid ? (initialTab as WorkspaceTabId) : 'overview';
+  // Compute enabled optional modules
+  const enabledModules: OptionalModuleId[] = useMemo(() => {
+    return Array.isArray(area.enabled_modules) ? (area.enabled_modules as OptionalModuleId[]) : [];
+  }, [area.enabled_modules]);
+
+  // Combine Core tabs + Installed Module tabs + Settings tab
+  const visibleTabs = useMemo<TabDef[]>(() => {
+    const list: TabDef[] = [...CORE_WORKSPACE_TABS];
+
+    if (enabledModules.includes('gpu_compute')) {
+      list.push({ id: 'gpu_compute', label: 'GPU Compute & Models', icon: 'sparkles', isModule: true });
+    }
+    if (enabledModules.includes('tech_collaboration')) {
+      list.push({ id: 'tech_collaboration', label: 'Tech Collaboration', icon: 'team', isModule: true });
+    }
+    if (enabledModules.includes('statistical_charts')) {
+      list.push({ id: 'statistical_charts', label: 'Statistical Charts', icon: 'flask', isModule: true });
+    }
+
+    list.push({ id: 'settings', label: 'Vault Settings', icon: 'settings' });
+    return list;
+  }, [enabledModules]);
+
+  // Map legacy / alias tab IDs
+  const resolveTabId = (tabKey?: string): string => {
+    if (!tabKey) return 'overview';
+    if (tabKey === 'specimens') return 'observations';
+    if (tabKey === 'publications') return 'writer';
+    if (tabKey === 'collaboration') return 'tech_collaboration';
+    if (tabKey === 'experiments') return enabledModules.includes('gpu_compute') ? 'gpu_compute' : 'overview';
+    return tabKey;
+  };
+
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const resolved = resolveTabId(initialTab);
+    return visibleTabs.some((t) => t.id === resolved) ? resolved : 'overview';
   });
 
   useEffect(() => {
-    if (initialTab && WORKSPACE_TABS.some((t) => t.id === initialTab)) {
-      setActiveTab(initialTab as WorkspaceTabId);
+    if (initialTab) {
+      const resolved = resolveTabId(initialTab);
+      if (visibleTabs.some((t) => t.id === resolved)) {
+        setActiveTab(resolved);
+      }
     }
-  }, [initialTab]);
+  }, [initialTab, visibleTabs]);
 
   const handleBackToDashboard = () => {
     navigate('/research');
   };
 
-  const handleTabChange = (tabId: WorkspaceTabId) => {
+  const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
     navigate(`/research/area/${area.id}/${tabId}`);
   };
@@ -73,7 +117,6 @@ export function AreaWorkspace({ initialTab }: AreaWorkspaceProps) {
         <div className="relative space-y-4">
           {/* Top navigation row */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            {/* If scoped collaborator view is active, hide back button to isolate view */}
             {!isScopedCollaborator ? (
               <button
                 type="button"
@@ -81,7 +124,7 @@ export function AreaWorkspace({ initialTab }: AreaWorkspaceProps) {
                 className="group inline-flex items-center gap-2 rounded-control border border-line bg-page px-3 py-1.5 text-xs font-semibold text-muted hover:border-line-strong hover:text-ink hover:bg-card transition-all cursor-pointer"
               >
                 <Icon name="arrowLeft" size={14} className="group-hover:-translate-x-0.5 transition-transform" />
-                <span>Research Dashboard</span>
+                <span>Research Areas Dashboard</span>
               </button>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-pill bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
@@ -143,6 +186,11 @@ export function AreaWorkspace({ initialTab }: AreaWorkspaceProps) {
                 <span className="rounded-pill bg-emerald-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
                   AIR-GAPPED VAULT
                 </span>
+                {enabledModules.length > 0 && (
+                  <span className="rounded-pill bg-purple-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                    {enabledModules.length} Modular Tool{enabledModules.length > 1 ? 's' : ''} Active
+                  </span>
+                )}
               </div>
               <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">
                 {area.name}
@@ -175,27 +223,50 @@ export function AreaWorkspace({ initialTab }: AreaWorkspaceProps) {
             </div>
           </div>
 
-          {/* 6 Tab Switcher Bar */}
-          <div className="flex gap-2 overflow-x-auto pt-2 border-t border-line/60">
-            {WORKSPACE_TABS.map((t) => {
-              const isActive = activeTab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  data-testid={`workspace-tab-${t.id}`}
-                  type="button"
-                  onClick={() => handleTabChange(t.id)}
-                  className={`flex shrink-0 items-center gap-2 rounded-control px-3.5 py-2 text-xs font-semibold cursor-pointer transition-all duration-150 ${
-                    isActive
-                      ? 'bg-crimson text-white shadow-sm ring-1 ring-crimson'
-                      : 'bg-page text-muted hover:bg-card hover:text-ink hover:border-line-strong border border-line/60'
-                  }`}
-                >
-                  <Icon name={t.icon as any} size={14} />
-                  <span>{t.label}</span>
-                </button>
-              );
-            })}
+          {/* Tab Switcher Bar + Add Tool Button */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-line/60">
+            {/* Tabs List */}
+            <div className="flex gap-2 overflow-x-auto py-1">
+              {visibleTabs.map((t) => {
+                const isActive = activeTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    data-testid={`workspace-tab-${t.id}`}
+                    type="button"
+                    onClick={() => handleTabChange(t.id)}
+                    className={`flex shrink-0 items-center gap-2 rounded-control px-3.5 py-2 text-xs font-semibold cursor-pointer transition-all duration-150 ${
+                      isActive
+                        ? 'bg-crimson text-white shadow-sm ring-1 ring-crimson'
+                        : t.isModule
+                        ? 'bg-purple-500/5 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 border border-purple-500/30'
+                        : 'bg-page text-muted hover:bg-card hover:text-ink hover:border-line-strong border border-line/60'
+                    }`}
+                  >
+                    <Icon name={t.icon as any} size={14} />
+                    <span>{t.label}</span>
+                    {t.isModule && (
+                      <span className="rounded bg-purple-500/20 px-1 py-0.2 text-[9px] font-mono font-bold text-purple-800 dark:text-purple-200">
+                        TOOL
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Modular Tool Catalog Button */}
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="plus"
+                onClick={() => setIsAddToolModalOpen(true)}
+                className="cursor-pointer text-xs font-semibold border-purple-500/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10"
+              >
+                + Add Tool / Module
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -203,12 +274,21 @@ export function AreaWorkspace({ initialTab }: AreaWorkspaceProps) {
       {/* Active Tab Panel */}
       <div className="min-h-[450px]">
         {activeTab === 'overview' && <OverviewNotebookTab />}
-        {activeTab === 'specimens' && <DataSpecimenVaultTab />}
-        {activeTab === 'experiments' && <ExperimentsArenaTab />}
-        {activeTab === 'collaboration' && <TechCollaborationTab />}
-        {activeTab === 'publications' && <PublicationsMonetizationTab />}
+        {activeTab === 'literature' && <LiteratureVaultTab />}
+        {activeTab === 'observations' && <ObservationsDatasetsTab />}
+        {activeTab === 'writer' && <PaperWriterPublishingTab />}
+        {activeTab === 'gpu_compute' && <GpuModelHubTab />}
+        {activeTab === 'tech_collaboration' && <TechCollaborationTab />}
+        {activeTab === 'statistical_charts' && <StatisticalChartBuilderTab />}
         {activeTab === 'settings' && <AreaVaultSettingsTab />}
       </div>
+
+      {/* Modal Tool Catalog */}
+      <AddToolModal
+        isOpen={isAddToolModalOpen}
+        onClose={() => setIsAddToolModalOpen(false)}
+        onSelectTab={(tabId) => handleTabChange(tabId)}
+      />
     </div>
   );
 }

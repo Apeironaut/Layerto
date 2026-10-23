@@ -259,6 +259,28 @@ export interface PrivacyShieldConfig {
   watermark_signature?: string;
 }
 
+export type OptionalModuleId = 'gpu_compute' | 'tech_collaboration' | 'statistical_charts';
+
+export type MethodologyStepStatus = 'pending' | 'in_progress' | 'completed';
+
+export interface MethodologyStep {
+  id: string;
+  step_number: number;
+  title: string;
+  description: string;
+  status: MethodologyStepStatus;
+  protocol_notes?: string;
+  updated_at?: string;
+}
+
+export interface ObservationColumn {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'date' | 'select' | 'boolean' | 'geo';
+  options?: string[];
+  unit?: string;
+}
+
 export interface ResearchArea {
   id: string;
   owner_id: string;
@@ -284,6 +306,8 @@ export interface ResearchArea {
   data_types?: SupportedDataType[];
   privacy_shield_config?: PrivacyShieldConfig;
   compliance_vault_type?: string;
+  enabled_modules?: OptionalModuleId[];
+  methodology_steps?: MethodologyStep[];
   isolation_level: string;
   role: 'owner' | 'editor' | 'viewer';
   papers: number;
@@ -295,6 +319,8 @@ export interface ResearchArea {
   created_at: string;
   updated_at: string;
 }
+
+export type LiteratureReference = Reference;
 
 export interface SpecimenItem extends Owned {
   updated_at?: string;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button, Icon, Modal, Skeleton, useResource } from '@layerto/ui';
 import { useAreaVault } from '../ResearchAreaBoundary';
-import type { CollaborationContract, ResearchTask } from '@layerto/types';
+import type { CollaborationContract, OptionalModuleId, ResearchArea, ResearchTask } from '@layerto/types';
 
 const CREDIT_ROLES = [
   'Conceptualization',
@@ -21,8 +21,22 @@ const CREDIT_ROLES = [
 ];
 
 export function TechCollaborationTab() {
-  const { area, scopedClient, isScopedCollaborator, setIsScopedCollaborator } = useAreaVault();
+  const { area, scopedClient, isScopedCollaborator, setIsScopedCollaborator, updateAreaLocally } = useAreaVault();
   const [isCreatingContract, setIsCreatingContract] = useState(false);
+  const [uninstallConfirm, setUninstallConfirm] = useState(false);
+
+  const handleUninstallModule = async () => {
+    const current = (area.enabled_modules as OptionalModuleId[]) || [];
+    const updated = current.filter((m) => m !== 'tech_collaboration');
+    try {
+      await scopedClient.updateArea(area.id, {
+        enabled_modules: updated,
+      } as Partial<ResearchArea>);
+      updateAreaLocally({ enabled_modules: updated });
+    } catch (err) {
+      console.error('Failed to uninstall module', err);
+    }
+  };
 
   // New contract form states
   const [collabEmail, setCollabEmail] = useState('');
@@ -238,6 +252,34 @@ export function TechCollaborationTab() {
           >
             Invite Tech Team / New Contract
           </Button>
+
+          {uninstallConfirm ? (
+            <div className="flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 p-1.5 rounded-control">
+              <span className="text-[11px] font-semibold text-rose-600">Uninstall tool?</span>
+              <button
+                type="button"
+                onClick={() => setUninstallConfirm(false)}
+                className="rounded border border-line bg-page px-1.5 py-0.5 text-[10px] text-muted cursor-pointer"
+              >
+                No
+              </button>
+              <button
+                type="button"
+                onClick={handleUninstallModule}
+                className="rounded bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white cursor-pointer"
+              >
+                Yes
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setUninstallConfirm(true)}
+              className="rounded-control border border-line bg-card px-3 py-1.5 text-xs text-muted hover:text-rose-600 transition-colors cursor-pointer"
+            >
+              Uninstall Module
+            </button>
+          )}
         </div>
       </div>
 

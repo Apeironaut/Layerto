@@ -342,23 +342,9 @@ export function RuledSheetComposerModal({
         )}
 
         {/* AUTHENTIC RULED PAPER SHEET CONTAINER */}
-        <div
-          className="relative rounded-l1 border border-line overflow-hidden shadow-inner"
-          style={{
-            backgroundColor: 'var(--color-card, #ffffff)',
-            backgroundImage: `
-              linear-gradient(to right, transparent 52px, rgba(239, 68, 68, 0.35) 52px, rgba(239, 68, 68, 0.35) 54px, transparent 54px),
-              repeating-linear-gradient(
-                transparent,
-                transparent 31px,
-                rgba(99, 102, 241, 0.12) 31px,
-                rgba(99, 102, 241, 0.12) 32px
-              )
-            `,
-          }}
-        >
+        <div className="relative rounded-l1 border border-line overflow-hidden shadow-inner bg-card">
           {/* Sheet Header Information Line */}
-          <div className="flex flex-wrap items-center justify-between border-b border-line/60 bg-page/40 px-4 py-2 text-xs font-mono">
+          <div className="flex flex-wrap items-center justify-between border-b-2 border-line/80 bg-page/60 px-5 py-2.5 text-xs font-mono">
             <div className="flex items-center gap-2">
               <span className="rounded bg-crimson/10 px-2 py-0.5 font-bold text-crimson border border-crimson/20">
                 ENTRY #{entryNumFormatted}
@@ -374,20 +360,19 @@ export function RuledSheetComposerModal({
           </div>
 
           {/* Title Line on Ruled Sheet */}
-          <div className="pt-2 px-3 pl-[66px] relative">
+          <div className="px-5 pl-[64px] py-2.5 border-b border-line/60 bg-page/20">
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Observation Entry Title / Subject..."
-              className="w-full bg-transparent font-bold text-base text-ink focus:outline-none border-b border-dashed border-line/60 pb-1"
-              style={{ lineHeight: '32px' }}
+              className="w-full bg-transparent font-bold text-base text-ink focus:outline-none placeholder:text-muted/60"
             />
           </div>
 
-          {/* Body Lines aligned to 32px line rhythm */}
-          <div className="px-3 pl-[66px] py-1">
+          {/* Body Lines with precise 32px line rhythm and local scrolling attachment */}
+          <div className="relative">
             <textarea
               id="ruled-composer-textarea"
               required
@@ -395,9 +380,18 @@ export function RuledSheetComposerModal({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Record detailed experimental observations, quantitative parameters, findings, and hypotheses..."
-              className="w-full bg-transparent text-sm text-ink font-sans focus:outline-none resize-none leading-[32px]"
+              className="w-full bg-transparent text-[14px] text-ink font-sans focus:outline-none resize-none pl-[64px] pr-5 py-0 placeholder:text-muted/50"
               style={{
                 lineHeight: '32px',
+                fontSize: '14px',
+                backgroundImage: `
+                  linear-gradient(to right, transparent 48px, rgba(239, 68, 68, 0.45) 48px, rgba(239, 68, 68, 0.45) 50px, transparent 50px),
+                  linear-gradient(to bottom, transparent 31px, rgba(99, 102, 241, 0.22) 31px, rgba(99, 102, 241, 0.22) 32px)
+                `,
+                backgroundSize: '100% 100%, 100% 32px',
+                backgroundRepeat: 'no-repeat, repeat-y',
+                backgroundPosition: '0 0, 0 -8px',
+                backgroundAttachment: 'local',
               }}
             />
           </div>

@@ -181,8 +181,8 @@ export function SignedInApp({ user, balance, balanceLoading, reloadBalance, onSi
   const annotate = path.match(new RegExp(`^/datasets/(${UUID})/annotate/?$`));
   const datasetMatch = path.match(new RegExp(`^/datasets/(${UUID})/?$`));
   const projectMatch = path.match(new RegExp(`^/projects/(${UUID})(?:/([a-z]+))?/?$`));
-  const researchAreaMatch = path.match(new RegExp(`^/research/area/(${UUID})(?:/([a-z-]+))?/?$`));
-  const researchMatch = path.match(/^\/research(?:\/([a-z-]+))?\/?$/);
+  const researchAreaMatch = path.match(new RegExp(`^/research/area/(${UUID})(?:/([a-z0-9_-]+))?/?$`));
+  const researchMatch = path.match(/^\/research(?:\/([a-z0-9_-]+))?\/?$/);
   const marketMatch = path.match(new RegExp(`^/marketplace(?:/([a-z]+))?(?:/(${UUID}))?/?$`));
   const teamMatch = path.match(new RegExp(`^/teams/(${UUID})/?$`));
   const fullBleed = wfMatch !== null || annotate !== null;

@@ -901,11 +901,11 @@ export class LayertoClient {
     return this.request<ResearchArea>(`/api/research/areas/${id}`);
   }
 
-  async createArea(p: Partial<ResearchArea> & { team_id?: string }): Promise<ResearchArea> {
+  async createArea(p: Partial<ResearchArea> & { team_id?: string | null }): Promise<ResearchArea> {
     return this.request<ResearchArea>('/api/research/areas', { method: 'POST', body: JSON.stringify(p) });
   }
 
-  async updateArea(id: string, p: Partial<ResearchArea> & { team_id?: string }): Promise<ResearchArea> {
+  async updateArea(id: string, p: Partial<ResearchArea> & { team_id?: string | null }): Promise<ResearchArea> {
     return this.request<ResearchArea>(`/api/research/areas/${id}`, { method: 'PATCH', body: JSON.stringify(p) });
   }
 
@@ -957,8 +957,32 @@ export class LayertoClient {
     return this.researchList<ResearchNote>('notes', f);
   }
 
+  async createNote(body: Partial<ResearchNote>): Promise<ResearchNote> {
+    return this.researchCreate<ResearchNote>('notes', body as Record<string, unknown>);
+  }
+
+  async updateNote(id: string, body: Partial<ResearchNote>): Promise<ResearchNote> {
+    return this.researchUpdate<ResearchNote>('notes', id, body as Record<string, unknown>);
+  }
+
+  async deleteNote(id: string): Promise<unknown> {
+    return this.researchDelete('notes', id);
+  }
+
   async literature(f: { area?: string; q?: string } = {}): Promise<Reference[]> {
     return this.researchList<Reference>('literature', f);
+  }
+
+  async createLiterature(body: Partial<Reference>): Promise<Reference> {
+    return this.researchCreate<Reference>('literature', body as Record<string, unknown>);
+  }
+
+  async updateLiterature(id: string, body: Partial<Reference>): Promise<Reference> {
+    return this.researchUpdate<Reference>('literature', id, body as Record<string, unknown>);
+  }
+
+  async deleteLiterature(id: string): Promise<unknown> {
+    return this.researchDelete('literature', id);
   }
 
   async tasks(f: { area?: string } = {}): Promise<ResearchTask[]> {

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Button, Icon } from '@layerto/ui';
 import { useAreaVault } from '../ResearchAreaBoundary';
+import { useHub } from '../../../hub/HubContext';
+import { api } from '../../../lib/api';
 import { ALL_TEMPLATES, getDisciplineMeta } from '../templates';
 import type { DisciplineTemplate } from '../templates';
 import type {
@@ -22,7 +24,12 @@ const ALL_DATA_TYPES: SupportedDataType[] = [
 
 export function AreaVaultSettingsTab() {
   const { area, scopedClient, reloadArea } = useAreaVault();
+  const { navigate } = useHub();
   const currentMeta = getDisciplineMeta(area.discipline);
+
+  const [isDeletingArea, setIsDeletingArea] = useState(false);
+  const [deleteConfirmationName, setDeleteConfirmationName] = useState('');
+  const [isDeletingProcess, setIsDeletingProcess] = useState(false);
 
   // Identity Form State
   const [name, setName] = useState(area.name);
@@ -710,6 +717,92 @@ export function AreaVaultSettingsTab() {
           </Button>
         </div>
       </form>
+
+      {/* DANGER ZONE: AIR-GAPPED AREA DELETION */}
+      <div className="rounded-l3 border border-rose-500/30 bg-rose-500/[0.03] p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-8 items-center justify-center rounded-control bg-rose-500/10 text-rose-600">
+            <Icon name="trash" size={16} />
+          </span>
+          <div>
+            <h4 className="text-sm font-bold text-ink">Danger Zone: Permanent Area Deletion</h4>
+            <p className="text-xs text-muted mt-0.5">
+              Permanently remove this research area, including all scoped observation tables, methodology pipelines, reference papers, and neural checkpoints.
+            </p>
+          </div>
+        </div>
+
+        <div className="pt-2 border-t border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <span className="text-xs text-muted">
+            This action cannot be undone. All air-gapped tables and contracts will be permanently cascaded.
+          </span>
+          <Button
+            variant="primary"
+            onClick={() => setIsDeletingArea(true)}
+            className="cursor-pointer text-xs bg-rose-600 hover:bg-rose-700 text-white"
+          >
+            Delete Research Area
+          </Button>
+        </div>
+      </div>
+
+      {/* DELETE AREA CONFIRMATION MODAL */}
+      {isDeletingArea && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="rounded-l3 border border-rose-500/40 bg-card p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center gap-2 text-rose-600 font-bold text-base">
+              <Icon name="alert" size={18} />
+              Confirm Permanent Area Deletion
+            </div>
+            <p className="text-xs text-muted leading-relaxed">
+              Are you sure you want to permanently delete <span className="font-bold text-ink">"{area.name}"</span>?
+              Please type the area name below to confirm:
+            </p>
+
+            <input
+              type="text"
+              placeholder={area.name}
+              value={deleteConfirmationName}
+              onChange={(e) => setDeleteConfirmationName(e.target.value)}
+              className="w-full rounded-control border border-rose-500/30 bg-page px-3 py-2 text-xs text-ink focus:border-rose-500 focus:outline-hidden font-bold"
+            />
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setIsDeletingArea(false);
+                  setDeleteConfirmationName('');
+                }}
+                className="cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                loading={isDeletingProcess}
+                disabled={deleteConfirmationName.trim() !== area.name.trim()}
+                onClick={async () => {
+                  setIsDeletingProcess(true);
+                  try {
+                    await api.deleteArea(area.id);
+                    navigate('/research');
+                  } catch (err) {
+                    console.error('Failed to delete area', err);
+                  } finally {
+                    setIsDeletingProcess(false);
+                  }
+                }}
+                className="cursor-pointer bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-40"
+              >
+                Permanently Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

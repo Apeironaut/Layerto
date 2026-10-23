@@ -3,7 +3,6 @@ import { Button, Icon, Modal, Skeleton, useResource } from '@layerto/ui';
 import { useAreaVault } from '../ResearchAreaBoundary';
 import { SplitLeakageGuard } from '../components/SplitLeakageGuard';
 import { EthicsPermitVaultDrawer } from '../components/EthicsPermitVaultDrawer';
-import { ExpertVerificationQueue } from '../components/ExpertVerificationQueue';
 import { getDisciplineMeta } from '../templates';
 import type { DatasetSplitSnapshot, ResearchCustomField, SpecimenItem } from '@layerto/types';
 
@@ -541,17 +540,6 @@ export function DataSpecimenVaultTab() {
               )}
             </div>
           )}
-        </div>
-
-        {/* ========================================================= */}
-        {/* RIGHT 4 COLUMNS: HITL Expert Verification Flashcard Queue */}
-        {/* ========================================================= */}
-        <div className="col-span-12 lg:col-span-4 space-y-4">
-          <ExpertVerificationQueue
-            areaId={area.id}
-            scopedClient={scopedClient}
-            discipline={area.discipline}
-          />
         </div>
       </div>
 

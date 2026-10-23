@@ -220,6 +220,7 @@ export function LabNotebookScratchpad({
             return (
               <div
                 key={n.id}
+                data-testid="ruled-note-card"
                 onClick={() => handleOpenReader(idx)}
                 className="group cursor-pointer rounded-l1 border border-line bg-card p-3.5 shadow-xs hover:border-line-strong hover:shadow-md transition-all space-y-2 relative"
               >
