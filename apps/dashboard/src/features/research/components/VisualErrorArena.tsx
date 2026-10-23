@@ -1,17 +1,46 @@
 import { useState } from 'react';
 import type { ArenaItem } from '@layerto/types';
-import { Icon } from '@layerto/ui';
+import { Button, Icon } from '@layerto/ui';
+import { useAreaVault } from '../ResearchAreaBoundary';
 
 interface VisualErrorArenaProps {
   items: ArenaItem[];
 }
 
 export function VisualErrorArena({ items }: VisualErrorArenaProps) {
+  const { area, scopedClient } = useAreaVault();
   const [filter, setFilter] = useState<'all' | 'false_positive' | 'disagreement' | 'boundary_uncertainty'>('all');
   const [selectedId, setSelectedId] = useState<string>(() => items[0]?.id ?? '');
+  const [pushing, setPushing] = useState(false);
+  const [pushedIds, setPushedIds] = useState<Set<string>>(new Set());
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
 
   const filteredItems = filter === 'all' ? items : items.filter((it) => it.failure_category === filter);
   const activeItem = items.find((it) => it.id === selectedId) ?? filteredItems[0] ?? items[0];
+
+  const handlePushToQueue = async () => {
+    if (!activeItem) return;
+    setPushing(true);
+    try {
+      await scopedClient.researchCreate('active-labeling-queue', {
+        area_id: area.id,
+        specimen_id: activeItem.specimen_id,
+        specimen_name: activeItem.sample_name,
+        media_url: activeItem.image_url,
+        predicted_label: (activeItem.model_a_prediction as any)?.label || 'Predicted Species',
+        confidence: (activeItem.model_a_prediction as any)?.confidence || 0.45,
+        alternative_label: (activeItem.model_b_prediction as any)?.label || 'Alternative Species',
+        status: 'pending',
+      });
+      setPushedIds((prev) => new Set(prev).add(activeItem.id));
+      setPushMsg(`✓ Pushed "${activeItem.sample_name}" to Domain Biologist Queue`);
+      setTimeout(() => setPushMsg(null), 3000);
+    } catch (err) {
+      console.error('Failed to push item to queue', err);
+    } finally {
+      setPushing(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -86,8 +115,28 @@ export function VisualErrorArena({ items }: VisualErrorArenaProps) {
                 <span className="text-xs text-muted">Difficulty: {activeItem.difficulty}</span>
               </div>
             </div>
-            <span className="text-xs text-muted font-mono">Sample ID: {activeItem.id.slice(0, 8)}</span>
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs text-muted font-mono">Sample ID: {activeItem.id.slice(0, 8)}</span>
+              <Button
+                variant={pushedIds.has(activeItem.id) ? 'secondary' : 'primary'}
+                size="sm"
+                loading={pushing}
+                disabled={pushedIds.has(activeItem.id)}
+                onClick={handlePushToQueue}
+                className="cursor-pointer text-xs flex items-center gap-1.5"
+              >
+                <Icon name={pushedIds.has(activeItem.id) ? 'check' : 'arrowRight'} size={12} />
+                <span>{pushedIds.has(activeItem.id) ? 'Pushed to Biologist' : 'Push to Biologist Queue'}</span>
+              </Button>
+            </div>
           </div>
+
+          {pushMsg && (
+            <div className="rounded-control bg-emerald-500/10 border border-emerald-500/30 p-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+              <Icon name="check" size={14} />
+              <span>{pushMsg}</span>
+            </div>
+          )}
 
           {/* Three-Column Visual Canvas */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

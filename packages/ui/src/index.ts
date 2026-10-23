@@ -92,3 +92,7 @@ export { MetricsPanel, METRIC_INFO, formatMetric } from './components/MetricsPan
 export { Tabs } from './components/Tabs';
 export type { TabItem } from './components/Tabs';
 export { Avatar } from './components/Avatar';
+
+// Reusable Research Ecosystem components
+export { ResearchAreaBadge, GeoShieldBadge, AdaptivePrivacyShieldBadge, AirGappedVaultCard, CRediTRoleTag } from './components/ResearchBadges';
+export type { ResearchAreaBadgeProps, GeoShieldBadgeProps, AdaptivePrivacyShieldBadgeProps, AirGappedVaultCardProps, CRediTRoleTagProps } from './components/ResearchBadges';

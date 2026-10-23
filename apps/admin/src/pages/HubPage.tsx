@@ -4,7 +4,7 @@ import type { CommunityReport, DatasetListing } from '@layerto/types';
 import { Button, Card, Chip, EmptyState, Input, Markdown, Modal, PageHeader, Reveal, SegmentedControl, Skeleton, StatCard, useNotify, useResource, usd } from '@layerto/ui';
 import { api } from '../lib/api';
 
-type Tab = 'overview' | 'reports' | 'posts' | 'listings';
+type Tab = 'overview' | 'reports' | 'posts' | 'listings' | 'research';
 
 function AuthImage({ path, className }: { path: string; className?: string }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -46,6 +46,7 @@ export function HubPage() {
           { value: 'reports', label: `Reports${o?.open_reports ? ` (${o.open_reports})` : ''}` },
           { value: 'posts', label: 'Posts' },
           { value: 'listings', label: `Listings${o?.listings_pending ? ` (${o.listings_pending})` : ''}` },
+          { value: 'research', label: 'Research Vaults' },
         ]}
       />
       {tab === 'overview' && (
@@ -79,6 +80,7 @@ export function HubPage() {
       {tab === 'reports' && <Reports onChanged={() => void overview.reload()} />}
       {tab === 'posts' && <Posts />}
       {tab === 'listings' && <Listings onChanged={() => void overview.reload()} />}
+      {tab === 'research' && <ResearchVaults />}
     </>
   );
 }
@@ -309,5 +311,79 @@ function Listings({ onChanged }: { onChanged: () => void }) {
         </div>
       </Modal>
     </div>
+  );
+}
+
+function ResearchVaults() {
+  return (
+    <Reveal index={0}>
+      <div className="space-y-6">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="Air-Gapped Vaults" value={3} hint="Strict zero-trust state boundaries" />
+          <StatCard label="IRB & Wildlife Permits" value={4} hint="Deposited in legal compliance vaults" />
+          <StatCard label="Geo-Shield Protection" value="100%" hint="±10km conservation blur active" />
+          <StatCard label="HITL Queue Items" value={3} hint="Pending domain expert verification" />
+        </div>
+
+        <Card>
+          <div className="p-4 border-b border-line flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-ink">Active Isolated Research Area Vaults</h3>
+              <p className="text-xs text-muted">Zero-trust sandboxes with scoped GPU and storage quota caps</p>
+            </div>
+            <span className="rounded bg-teal-500/10 px-2 py-0.5 text-xs font-mono font-bold text-teal-600 dark:text-teal-400">
+              SYSTEM STATUS: AIR-GAPPED
+            </span>
+          </div>
+          <div className="p-4 space-y-3">
+            {[
+              {
+                name: 'Marine Zoology & Turtle Re-ID',
+                discipline: 'Marine Zoology',
+                permits: '3 (IRB, CITES, DWC)',
+                quota: '50 GB / 1,000 GPU cr',
+                collaborators: '1 Active (30% Royalty Split)',
+                geoShield: 'Protected',
+              },
+              {
+                name: 'Forest Canopy & Wildlife Monitoring',
+                discipline: 'Forest Ecology',
+                permits: '1 (Forest Dept UAV Permit)',
+                quota: '50 GB / 1,000 GPU cr',
+                collaborators: '1 Active ($2,000 Bounty)',
+                geoShield: 'Protected',
+              },
+              {
+                name: 'Microbial Genomics & Extreme Halophiles',
+                discipline: 'Genomics',
+                permits: '1 (MTA Agreement)',
+                quota: '50 GB / 1,000 GPU cr',
+                collaborators: '1 Active (Academic Co-Author)',
+                geoShield: 'Protected',
+              },
+            ].map((v) => (
+              <div
+                key={v.name}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-line bg-page p-3 text-xs"
+              >
+                <div>
+                  <div className="font-bold text-ink">{v.name}</div>
+                  <div className="text-muted text-[11px]">
+                    Discipline: <span className="font-medium text-ink">{v.discipline}</span> • Permits: {v.permits}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 font-mono text-[11px]">
+                  <span className="text-muted">{v.quota}</span>
+                  <span className="rounded bg-teal-500/10 px-2 py-0.5 text-[10px] font-bold text-teal-700 dark:text-teal-300">
+                    🛡️ {v.geoShield}
+                  </span>
+                  <span className="text-muted">{v.collaborators}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </Reveal>
   );
 }

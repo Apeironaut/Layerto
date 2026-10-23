@@ -10,6 +10,7 @@ import { ProfilePage, PublicProjectView } from './pages/ProfilePage';
 import { SitePage } from './pages/SitePage';
 import { PaperPage, PapersPage } from './pages/PaperPage';
 import { PortfolioPage } from './pages/PortfolioPage';
+import { PublicResearchStorefrontPage } from './pages/PublicResearchStorefrontPage';
 import { ROOT_DOMAIN } from './config';
 
 /** Subdomains that are never portfolios. */
@@ -47,6 +48,7 @@ export default function App() {
   else if (path === '/docs') page = <DocsPage />;
   else if (path === '/papers') page = <PapersPage navigate={navigate} />;
   else if (/^\/papers\/[0-9a-f-]{36}\/?$/.test(path)) page = <PaperPage id={path.split('/')[2]} navigate={navigate} />;
+  else if (path === '/research') page = <PublicResearchStorefrontPage navigate={navigate} />;
   else if (path === '/privacy') page = <PrivacyPage />;
   else if (path.startsWith('/models/')) page = <ModelPage slug={path.slice('/models/'.length)} models={models} navigate={navigate} />;
   else page = <NotFoundPage navigate={navigate} />;

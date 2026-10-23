@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '@layerto/ui';
 import { useAreaVault } from './ResearchAreaBoundary';
 import { useHub } from '../../hub/HubContext';
@@ -8,6 +8,7 @@ import { ExperimentsArenaTab } from './tabs/ExperimentsArenaTab';
 import { TechCollaborationTab } from './tabs/TechCollaborationTab';
 import { PublicationsMonetizationTab } from './tabs/PublicationsMonetizationTab';
 import { AreaVaultSettingsTab } from './tabs/AreaVaultSettingsTab';
+import { getDisciplineMeta } from './templates';
 
 const WORKSPACE_TABS = [
   { id: 'overview', label: 'Overview & Lab Notebook', icon: 'overview' },
@@ -33,6 +34,12 @@ export function AreaWorkspace({ initialTab }: AreaWorkspaceProps) {
     return valid ? (initialTab as WorkspaceTabId) : 'overview';
   });
 
+  useEffect(() => {
+    if (initialTab && WORKSPACE_TABS.some((t) => t.id === initialTab)) {
+      setActiveTab(initialTab as WorkspaceTabId);
+    }
+  }, [initialTab]);
+
   const handleBackToDashboard = () => {
     navigate('/research');
   };
@@ -42,16 +49,16 @@ export function AreaWorkspace({ initialTab }: AreaWorkspaceProps) {
     navigate(`/research/area/${area.id}/${tabId}`);
   };
 
-  const disciplineTitle =
-    area.discipline === 'zoology'
-      ? 'Zoology & Wildlife Conservation'
-      : area.discipline === 'ecology'
-      ? 'Ecology & Field Science'
-      : area.discipline === 'cv_ai'
-      ? 'Computer Vision & AI'
-      : area.discipline === 'biomedical'
-      ? 'Biomedical & Pathology'
-      : 'Interdisciplinary Studio';
+  const meta = getDisciplineMeta(area.discipline);
+  const disciplineTitle = meta.label;
+  const domainLabel =
+    meta.category === 'Medical & Clinical Research'
+      ? '🩺 Clinical View'
+      : meta.category === 'Language, Humanities & Social Sciences'
+      ? '📜 Linguistic View'
+      : meta.category === 'Physical Sciences & Engineering'
+      ? '🔭 Lab View'
+      : '🌿 Domain View';
 
   return (
     <div className="space-y-6 w-full">
@@ -94,8 +101,7 @@ export function AreaWorkspace({ initialTab }: AreaWorkspaceProps) {
                     : 'text-muted hover:text-ink hover:bg-card/50'
                 }`}
               >
-                <span>🌿</span>
-                <span>Domain View</span>
+                <span>{domainLabel}</span>
               </button>
               <button
                 type="button"
@@ -176,6 +182,7 @@ export function AreaWorkspace({ initialTab }: AreaWorkspaceProps) {
               return (
                 <button
                   key={t.id}
+                  data-testid={`workspace-tab-${t.id}`}
                   type="button"
                   onClick={() => handleTabChange(t.id)}
                   className={`flex shrink-0 items-center gap-2 rounded-control px-3.5 py-2 text-xs font-semibold cursor-pointer transition-all duration-150 ${

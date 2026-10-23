@@ -9,6 +9,7 @@ const LINKS = [
   { to: '/#hub', label: 'Hub' },
   { to: '/#studio', label: 'Studio' },
   { to: '/papers', label: 'Papers' },
+  { to: '/research', label: 'Research' },
   { to: '/#pricing', label: 'Pricing' },
   { to: '/#faq', label: 'FAQ' },
   { to: '/docs', label: 'Docs' },

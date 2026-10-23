@@ -51,6 +51,10 @@ type area struct {
 	Notes               int             `json:"notes"`
 	OpenTasks           int             `json:"open_tasks"`
 	Specimens           int             `json:"specimens"`
+	CustomFields        json.RawMessage `json:"custom_fields"`
+	DataTypes           json.RawMessage `json:"data_types"`
+	PrivacyShieldConfig json.RawMessage `json:"privacy_shield_config"`
+	ComplianceVaultType string          `json:"compliance_vault_type"`
 	CreatedAt           string          `json:"created_at"`
 	UpdatedAt           string          `json:"updated_at"`
 }
@@ -68,22 +72,42 @@ const areaCols = `ra.id::text, ra.owner_id::text, COALESCE(up.username, ''), ra.
 	COALESCE(ra.creator_id, ra.owner_id)::text,
 	COALESCE(ra.storage_quota_bytes, 0)::bigint,
 	COALESCE(ra.gpu_credits_budget, 0)::bigint,
-	COALESCE(ra.gpu_credits_used, 0)::bigint
+	COALESCE(ra.gpu_credits_used, 0)::bigint,
+	COALESCE(ra.custom_fields, '[]'::jsonb),
+	COALESCE(ra.data_types, '["Images"]'::jsonb),
+	COALESCE(ra.privacy_shield_config, '{"shield_type":"geo_privacy","enabled":true}'::jsonb),
+	COALESCE(ra.compliance_vault_type, 'permits')
 	FROM research_areas ra LEFT JOIN user_profiles up ON up.user_id = ra.owner_id LEFT JOIN teams t ON t.id = ra.team_id`
 
 func scanArea(row pgx.Row) (area, error) {
 	var a area
 	var c, u time.Time
-	var cm []byte
+	var cm, cf, dt, psc []byte
 	err := row.Scan(&a.ID, &a.OwnerID, &a.Owner, &a.TeamID, &a.TeamName, &a.Name, &a.Description, &a.Color, &a.Status, &a.IsPublic,
 		&a.Discipline, &a.Hypothesis, &a.ReproducibilityLock, &a.StorageBytesUsed, &a.GpuSecondsUsed, &cm, &a.IsolationLevel,
 		&c, &u, &a.Role, &a.Papers, &a.Experiments, &a.Findings, &a.Notes, &a.OpenTasks, &a.Specimens,
-		&a.CreatorID, &a.StorageQuotaBytes, &a.GpuCreditsBudget, &a.GpuCreditsUsed)
+		&a.CreatorID, &a.StorageQuotaBytes, &a.GpuCreditsBudget, &a.GpuCreditsUsed,
+		&cf, &dt, &psc, &a.ComplianceVaultType)
 	a.CreatedAt, a.UpdatedAt = ts(c), ts(u)
 	if len(cm) > 0 {
 		a.CustomMetrics = cm
 	} else {
 		a.CustomMetrics = json.RawMessage("[]")
+	}
+	if len(cf) > 0 {
+		a.CustomFields = cf
+	} else {
+		a.CustomFields = json.RawMessage("[]")
+	}
+	if len(dt) > 0 {
+		a.DataTypes = dt
+	} else {
+		a.DataTypes = json.RawMessage(`["Images"]`)
+	}
+	if len(psc) > 0 {
+		a.PrivacyShieldConfig = psc
+	} else {
+		a.PrivacyShieldConfig = json.RawMessage(`{"shield_type":"geo_privacy","enabled":true}`)
 	}
 	return a, err
 }
@@ -121,6 +145,10 @@ type areaInput struct {
 	Hypothesis          *string         `json:"hypothesis"`
 	ReproducibilityLock *bool           `json:"reproducibility_lock"`
 	CustomMetrics       json.RawMessage `json:"custom_metrics"`
+	CustomFields        json.RawMessage `json:"custom_fields"`
+	DataTypes           json.RawMessage `json:"data_types"`
+	PrivacyShieldConfig json.RawMessage `json:"privacy_shield_config"`
+	ComplianceVaultType *string         `json:"compliance_vault_type"`
 	TeamID              *string         `json:"team_id"`
 }
 
@@ -194,10 +222,26 @@ func (h *Handler) HandleCreateArea(w http.ResponseWriter, r *http.Request) {
 	if len(in.CustomMetrics) > 0 {
 		cm = in.CustomMetrics
 	}
+	var cf any = []byte("[]")
+	if len(in.CustomFields) > 0 {
+		cf = in.CustomFields
+	}
+	var dt any = []byte(`["Images"]`)
+	if len(in.DataTypes) > 0 {
+		dt = in.DataTypes
+	}
+	var psc any = []byte(`{"shield_type":"geo_privacy","enabled":true}`)
+	if len(in.PrivacyShieldConfig) > 0 {
+		psc = in.PrivacyShieldConfig
+	}
+	cvt := "permits"
+	if in.ComplianceVaultType != nil && *in.ComplianceVaultType != "" {
+		cvt = *in.ComplianceVaultType
+	}
 	var id string
-	err := h.pool.QueryRow(r.Context(), `INSERT INTO research_areas (owner_id, creator_id, team_id, name, description, color, status, is_public, discipline, hypothesis, custom_metrics)
-		VALUES ($1, $1, $2::uuid, $3, $4, $5, COALESCE($6, 'active'), COALESCE($7, false), $8, $9, $10::jsonb) RETURNING id::text`,
-		uid, team, strings.TrimSpace(*in.Name), deref(in.Description), color, in.Status, in.IsPublic, discipline, hypothesis, cm).Scan(&id)
+	err := h.pool.QueryRow(r.Context(), `INSERT INTO research_areas (owner_id, creator_id, team_id, name, description, color, status, is_public, discipline, hypothesis, custom_metrics, custom_fields, data_types, privacy_shield_config, compliance_vault_type)
+		VALUES ($1, $1, $2::uuid, $3, $4, $5, COALESCE($6, 'active'), COALESCE($7, false), $8, $9, $10::jsonb, $11::jsonb, $12::jsonb, $13::jsonb, $14) RETURNING id::text`,
+		uid, team, strings.TrimSpace(*in.Name), deref(in.Description), color, in.Status, in.IsPublic, discipline, hypothesis, cm, cf, dt, psc, cvt).Scan(&id)
 	if err != nil {
 		internal(w, r, err)
 		return
@@ -272,14 +316,30 @@ func (h *Handler) HandleUpdateArea(w http.ResponseWriter, r *http.Request) {
 	if len(in.CustomMetrics) > 0 {
 		cm = in.CustomMetrics
 	}
+	var cf any = nil
+	if len(in.CustomFields) > 0 {
+		cf = in.CustomFields
+	}
+	var dt any = nil
+	if len(in.DataTypes) > 0 {
+		dt = in.DataTypes
+	}
+	var psc any = nil
+	if len(in.PrivacyShieldConfig) > 0 {
+		psc = in.PrivacyShieldConfig
+	}
 	if _, err := h.pool.Exec(ctx, `UPDATE research_areas SET name = COALESCE($2, name), description = COALESCE($3, description),
 		color = COALESCE($4, color), status = COALESCE($5, status), is_public = COALESCE($6, is_public),
 		discipline = COALESCE($7, discipline), hypothesis = COALESCE($8, hypothesis),
 		reproducibility_lock = COALESCE($9, reproducibility_lock),
 		custom_metrics = CASE WHEN $10::jsonb IS NOT NULL THEN $10::jsonb ELSE custom_metrics END,
-		team_id = CASE WHEN $11 THEN $12::uuid ELSE team_id END, updated_at = now() WHERE id = $1`,
+		custom_fields = CASE WHEN $11::jsonb IS NOT NULL THEN $11::jsonb ELSE custom_fields END,
+		data_types = CASE WHEN $12::jsonb IS NOT NULL THEN $12::jsonb ELSE data_types END,
+		privacy_shield_config = CASE WHEN $13::jsonb IS NOT NULL THEN $13::jsonb ELSE privacy_shield_config END,
+		compliance_vault_type = COALESCE($14, compliance_vault_type),
+		team_id = CASE WHEN $15 THEN $16::uuid ELSE team_id END, updated_at = now() WHERE id = $1`,
 		id, trimPtr(in.Name), trimPtr(in.Description), in.Color, in.Status, in.IsPublic,
-		in.Discipline, in.Hypothesis, in.ReproducibilityLock, cm, setTeam, team); err != nil {
+		in.Discipline, in.Hypothesis, in.ReproducibilityLock, cm, cf, dt, psc, in.ComplianceVaultType, setTeam, team); err != nil {
 		internal(w, r, err)
 		return
 	}

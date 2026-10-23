@@ -901,11 +901,11 @@ export class LayertoClient {
     return this.request<ResearchArea>(`/api/research/areas/${id}`);
   }
 
-  async createArea(p: Partial<Pick<ResearchArea, 'name' | 'description' | 'color' | 'status' | 'is_public'>> & { team_id?: string }): Promise<ResearchArea> {
+  async createArea(p: Partial<ResearchArea> & { team_id?: string }): Promise<ResearchArea> {
     return this.request<ResearchArea>('/api/research/areas', { method: 'POST', body: JSON.stringify(p) });
   }
 
-  async updateArea(id: string, p: Partial<Pick<ResearchArea, 'name' | 'description' | 'color' | 'status' | 'is_public'>> & { team_id?: string }): Promise<ResearchArea> {
+  async updateArea(id: string, p: Partial<ResearchArea> & { team_id?: string }): Promise<ResearchArea> {
     return this.request<ResearchArea>(`/api/research/areas/${id}`, { method: 'PATCH', body: JSON.stringify(p) });
   }
 
@@ -1168,4 +1168,6 @@ export type ResearchKind =
   | 'arena-items'
   | 'collaboration-contracts'
   | 'domain-insights'
-  | 'publications';
+  | 'publications'
+  | 'ethics-permits'
+  | 'active-labeling-queue';

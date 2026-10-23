@@ -207,13 +207,56 @@ export interface Purchase {
 
 // ---- research
 
-export type ResearchDiscipline = 'zoology' | 'ecology' | 'cv_ai' | 'biomedical' | 'interdisciplinary';
+export type ResearchDiscipline =
+  | 'zoology'
+  | 'ecology'
+  | 'cv_ai'
+  | 'biomedical'
+  | 'interdisciplinary'
+  | 'radiology_clinical'
+  | 'genomics_pathology'
+  | 'linguistics_nlp'
+  | 'social_economics'
+  | 'materials_physics'
+  | 'astronomy_spatial'
+  | 'pure_ai_llm'
+  | 'custom_blank'
+  | string;
+
 export type WorkspaceViewMode = 'domain' | 'tech' | 'unified';
 
 export interface ResearchMetricCol {
   key: string;
   label: string;
   unit: string;
+}
+
+export interface ResearchCustomField {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'category' | 'json' | 'boolean';
+  required?: boolean;
+  options?: string[];
+  unit?: string;
+}
+
+export type SupportedDataType =
+  | 'Images'
+  | 'Audio'
+  | 'Text/Corpus'
+  | 'Tabular/CSV'
+  | 'DICOM/Medical'
+  | 'Time-Series';
+
+export interface PrivacyShieldConfig {
+  shield_type: 'geo_privacy' | 'hipaa_dicom' | 'nlp_pii' | 'nda_watermark';
+  enabled: boolean;
+  blur_radius_km?: number;
+  mask_patient_identifiers?: boolean;
+  scrub_dicom_headers?: boolean;
+  pseudonymize_speakers?: boolean;
+  strip_pii_entities?: boolean;
+  watermark_signature?: string;
 }
 
 export interface ResearchArea {
@@ -237,6 +280,10 @@ export interface ResearchArea {
   gpu_credits_budget: number;
   gpu_credits_used: number;
   custom_metrics: ResearchMetricCol[];
+  custom_fields?: ResearchCustomField[];
+  data_types?: SupportedDataType[];
+  privacy_shield_config?: PrivacyShieldConfig;
+  compliance_vault_type?: string;
   isolation_level: string;
   role: 'owner' | 'editor' | 'viewer';
   papers: number;
@@ -256,12 +303,39 @@ export interface SpecimenItem extends Owned {
   common_name: string;
   media_url: string;
   media_type: 'photo' | 'video' | 'audio';
+  modality?: 'image' | 'tabular' | 'text' | 'audio';
   gps_lat: number | null;
   gps_lng: number | null;
   habitat: string;
   morphometrics: Record<string, any>;
+  custom_attributes?: Record<string, any>;
   observation_date: string;
   notes: string;
+}
+
+export interface ActiveLabelingItem {
+  id: string;
+  area_id: string;
+  specimen_id?: string;
+  specimen_name: string;
+  media_url: string;
+  predicted_label: string;
+  confidence: number;
+  alternative_label?: string;
+  status: 'pending' | 'confirmed' | 'corrected' | 'ambiguous';
+  resolved_label?: string;
+  reviewer_notes?: string;
+  created_at: string;
+}
+
+export interface TestbenchInferenceResult {
+  predicted_label: string;
+  confidence: number;
+  explanation: string;
+  inference_time_ms: number;
+  model_name: string;
+  bounding_box?: { x: number; y: number; width: number; height: number };
+  alternative_predictions?: { label: string; confidence: number }[];
 }
 
 export interface LeakageSample {
@@ -420,12 +494,31 @@ export interface Finding extends Owned {
   status: 'open' | 'confirmed' | 'refuted';
 }
 
+export interface NoteEvidenceItem {
+  id?: string;
+  kind: 'image' | 'link';
+  url: string;
+  title?: string;
+  caption?: string;
+}
+
 export interface ResearchNote extends Owned {
   updated_at: string;
   title: string;
   body: string;
   pinned: boolean;
   auto: boolean;
+  entry_number?: number;
+  evidence?: NoteEvidenceItem[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface ResearchMilestone {
+  id: string;
+  label: string;
+  category: string;
+  completed: boolean;
+  completed_at?: string;
 }
 
 export interface Reference extends Owned {

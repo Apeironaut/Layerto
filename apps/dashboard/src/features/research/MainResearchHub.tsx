@@ -4,15 +4,9 @@ import { api } from '../../lib/api';
 import { useHub } from '../../hub/HubContext';
 import { ResourcePoolDonutCharts } from './components/ResourcePoolDonutCharts';
 import { ManageResourceAllocationsModal } from './components/ManageResourceAllocationsModal';
-import type { ResearchArea, ResearchDiscipline, ResearchOverview } from '@layerto/types';
-
-const DISCIPLINES: { id: ResearchDiscipline; label: string; desc: string }[] = [
-  { id: 'zoology', label: 'Zoology & Wildlife Conservation', desc: 'Fauna photo-ID, GPS telemetry, scute graphs' },
-  { id: 'ecology', label: 'Ecology & Field Science', desc: 'LiDAR canopy mapping, drone photogrammetry' },
-  { id: 'cv_ai', label: 'Computer Vision & AI Engineering', desc: 'Deep learning models, ablation matrices' },
-  { id: 'biomedical', label: 'Biomedical & Pathology', desc: 'Cell segmentation, digital pathology' },
-  { id: 'interdisciplinary', label: 'Custom Interdisciplinary Studio', desc: 'Flexible cross-domain collaboration' },
-];
+import { TEMPLATE_CATEGORIES, ALL_TEMPLATES, getDisciplineMeta } from './templates';
+import type { DisciplineTemplate } from './templates';
+import type { ResearchArea, ResearchOverview, ResearchCustomField, ResearchMetricCol, SupportedDataType, PrivacyShieldConfig } from '@layerto/types';
 
 export function MainResearchHub() {
   const { navigate } = useHub();
@@ -20,12 +14,30 @@ export function MainResearchHub() {
   const [isManagingAllocations, setIsManagingAllocations] = useState(false);
 
   // New Area Form State
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [color, setColor] = useState('#0D9488');
-  const [discipline, setDiscipline] = useState<ResearchDiscipline>('zoology');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('life_sciences');
+  const [selectedTemplate, setSelectedTemplate] = useState<DisciplineTemplate>(ALL_TEMPLATES[0]);
+  const [name, setName] = useState('Marine Zoology & Fauna Photo-ID Research');
+  const [description, setDescription] = useState(ALL_TEMPLATES[0].desc);
+  const [color, setColor] = useState(ALL_TEMPLATES[0].color);
   const [hypothesis, setHypothesis] = useState('');
+  const [customFields, setCustomFields] = useState<ResearchCustomField[]>(ALL_TEMPLATES[0].defaultCustomFields);
+  const [dataTypes, setDataTypes] = useState<SupportedDataType[]>(ALL_TEMPLATES[0].defaultDataTypes);
+  const [customMetrics, setCustomMetrics] = useState<ResearchMetricCol[]>(ALL_TEMPLATES[0].defaultMetrics);
+  const [privacyShieldConfig, setPrivacyShieldConfig] = useState<PrivacyShieldConfig>(ALL_TEMPLATES[0].defaultPrivacyShield);
+  const [complianceVaultType, setComplianceVaultType] = useState<string>(ALL_TEMPLATES[0].complianceVaultType);
   const [saving, setSaving] = useState(false);
+
+  const handleSelectTemplate = (tmpl: DisciplineTemplate) => {
+    setSelectedTemplate(tmpl);
+    setName(tmpl.id === 'custom_blank' ? 'Custom Domain Research Studio' : tmpl.label + ' Lab');
+    setDescription(tmpl.desc);
+    setColor(tmpl.color);
+    setCustomFields(tmpl.defaultCustomFields);
+    setDataTypes(tmpl.defaultDataTypes);
+    setCustomMetrics(tmpl.defaultMetrics);
+    setPrivacyShieldConfig(tmpl.defaultPrivacyShield);
+    setComplianceVaultType(tmpl.complianceVaultType);
+  };
 
   // Fetch real database records via api-client
   const areasResource = useResource<ResearchArea[]>(
@@ -60,14 +72,16 @@ export function MainResearchHub() {
         name: name.trim(),
         description: description.trim(),
         color,
-        discipline,
+        discipline: selectedTemplate.id,
         hypothesis: hypothesis.trim(),
+        custom_fields: customFields,
+        data_types: dataTypes,
+        custom_metrics: customMetrics,
+        privacy_shield_config: privacyShieldConfig,
+        compliance_vault_type: complianceVaultType,
       } as any);
 
       setIsCreating(false);
-      setName('');
-      setDescription('');
-      setHypothesis('');
       await areasResource.reload();
       await overviewResource.reload();
 
@@ -199,7 +213,10 @@ export function MainResearchHub() {
         ) : (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
             {areas.map((a) => {
-              const disciplineObj = DISCIPLINES.find((d) => d.id === a.discipline);
+              const meta = getDisciplineMeta(a.discipline);
+              const dataTypesList = a.data_types || meta.defaultDataTypes;
+              const primaryMetrics = a.custom_metrics?.slice(0, 2) || meta.defaultMetrics.slice(0, 2);
+
               return (
                 <div
                   key={a.id}
@@ -210,7 +227,7 @@ export function MainResearchHub() {
                   <div
                     aria-hidden
                     className="absolute inset-y-0 left-0 w-1.5"
-                    style={{ background: a.color || 'var(--color-crimson)' }}
+                    style={{ background: a.color || meta.color || 'var(--color-crimson)' }}
                   />
 
                   <div className="pl-2 space-y-2.5">
@@ -218,13 +235,13 @@ export function MainResearchHub() {
                       <div className="flex items-center gap-2">
                         <span
                           className="size-2.5 rounded-full shrink-0"
-                          style={{ background: a.color || 'var(--color-crimson)' }}
+                          style={{ background: a.color || meta.color || 'var(--color-crimson)' }}
                         />
-                        <span className="rounded-pill bg-page px-2 py-0.5 text-[10px] font-semibold text-muted border border-line truncate max-w-[150px]">
-                          {disciplineObj?.label || 'Zoology & Field Science'}
+                        <span className="rounded-pill bg-page px-2 py-0.5 text-[10px] font-semibold text-muted border border-line truncate max-w-[170px]">
+                          {meta.label}
                         </span>
                       </div>
-                      <span className="rounded-pill bg-emerald-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-600">
+                      <span className="rounded-pill bg-emerald-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
                         AIR-GAPPED
                       </span>
                     </div>
@@ -237,6 +254,41 @@ export function MainResearchHub() {
                         {a.description || 'Dedicated zero-trust research workspace.'}
                       </p>
                     </div>
+
+                    {/* Supported Data Types & Privacy Shield Badges */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      {dataTypesList.slice(0, 3).map((dt) => (
+                        <span
+                          key={dt}
+                          className="rounded bg-page px-2 py-0.5 text-[10px] font-mono font-semibold text-ink-secondary border border-line"
+                        >
+                          {dt}
+                        </span>
+                      ))}
+                      {a.privacy_shield_config?.enabled && (
+                        <span className="rounded bg-teal-500/10 px-1.5 py-0.5 text-[9px] font-mono font-bold text-teal-700 dark:text-teal-300 border border-teal-500/20">
+                          {a.privacy_shield_config.shield_type === 'hipaa_dicom'
+                            ? 'HIPAA SCRUB'
+                            : a.privacy_shield_config.shield_type === 'nlp_pii'
+                            ? 'PII REDACTED'
+                            : a.privacy_shield_config.shield_type === 'nda_watermark'
+                            ? 'NDA SEAL'
+                            : 'GEO-SHIELD'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Custom Metric Objectives Preview */}
+                    {primaryMetrics.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-muted bg-page/50 p-1.5 rounded border border-line/60">
+                        {primaryMetrics.map((m) => (
+                          <span key={m.key} className="flex items-center gap-1">
+                            <span className="text-muted">{m.label}:</span>
+                            <span className="font-bold text-ink">{m.unit}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Dedicated Resource Allocation Badges */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px] font-mono">
@@ -258,7 +310,7 @@ export function MainResearchHub() {
                   {/* Vault Stats & Enter Button */}
                   <div className="pl-2 pt-3 border-t border-line/60 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2 font-mono text-[10px] text-muted">
-                      <span><strong>{a.specimens || 0}</strong> spec</span>
+                      <span><strong>{a.specimens || 0}</strong> {meta.itemPlural.toLowerCase().slice(0, 10)}</span>
                       <span>•</span>
                       <span><strong>{a.experiments || 0}</strong> runs</span>
                       <span>•</span>
@@ -282,36 +334,106 @@ export function MainResearchHub() {
         <Modal
           open={isCreating}
           onClose={() => setIsCreating(false)}
-          title="Create Air-Gapped Research Area"
+          title="Create Universal Research Area (Air-Gapped)"
           size="lg"
         >
-          <form onSubmit={handleCreateArea} className="space-y-4 text-xs">
+          <form onSubmit={handleCreateArea} className="space-y-5 text-xs max-h-[80vh] overflow-y-auto pr-1">
             <div className="rounded-control bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300">
-              <span className="font-semibold">Zero-Trust Isolation Notice:</span> The new Research Area
-              will be created as a completely air-gapped container with its own database scope.
-              No existing specimens, datasets, or experiments will leak into this area.
+              <span className="font-semibold">Field-Agnostic Isolation:</span> Any discipline from medical clinical scans to ancient linguistic paleography or pure AI operates as a zero-trust vault with automated privacy shields and custom schemas.
             </div>
 
+            {/* 6 Category Switcher */}
             <div>
-              <label className="font-semibold text-ink block mb-1">
-                Discipline Profile *
+              <label className="font-semibold text-ink block mb-2">
+                1. Select Academic or Scientific Discipline Category *
               </label>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {DISCIPLINES.map((d) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {TEMPLATE_CATEGORIES.map((cat) => (
                   <button
-                    key={d.id}
+                    key={cat.id}
                     type="button"
-                    onClick={() => setDiscipline(d.id)}
-                    className={`rounded-control border p-3 text-left transition-all ${
-                      discipline === d.id
-                        ? 'border-crimson bg-crimson/5 font-bold text-ink ring-1 ring-crimson'
-                        : 'border-line bg-page text-muted hover:text-ink'
+                    onClick={() => {
+                      setSelectedCategoryId(cat.id);
+                      if (cat.templates.length > 0) {
+                        handleSelectTemplate(cat.templates[0]);
+                      }
+                    }}
+                    className={`rounded-control border p-2.5 text-left transition-all cursor-pointer ${
+                      selectedCategoryId === cat.id
+                        ? 'border-crimson bg-crimson/5 font-bold text-ink ring-1 ring-crimson shadow-xs'
+                        : 'border-line bg-page text-muted hover:text-ink hover:border-line-strong'
                     }`}
                   >
-                    <div className="text-xs">{d.label}</div>
-                    <div className="text-[10px] text-muted mt-0.5">{d.desc}</div>
+                    <div className="font-semibold text-xs truncate">{cat.title}</div>
+                    <div className="text-[10px] text-muted mt-0.5 line-clamp-1">{cat.description}</div>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Template Presets within Selected Category */}
+            <div>
+              <label className="font-semibold text-ink block mb-2">
+                2. Choose Discipline Starter Preset *
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {TEMPLATE_CATEGORIES.find((c) => c.id === selectedCategoryId)?.templates.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => handleSelectTemplate(t)}
+                    className={`rounded-control border p-3 text-left transition-all cursor-pointer flex items-start gap-2.5 ${
+                      selectedTemplate.id === t.id
+                        ? 'border-teal-500 bg-teal-500/5 font-bold text-ink ring-1 ring-teal-500 shadow-xs'
+                        : 'border-line bg-page text-muted hover:text-ink hover:border-line-strong'
+                    }`}
+                  >
+                    <span
+                      className="size-3 rounded-full mt-0.5 shrink-0"
+                      style={{ background: t.color }}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-bold text-xs text-ink">{t.label}</div>
+                      <div className="text-[10px] text-muted mt-0.5 leading-relaxed">{t.desc}</div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {t.defaultDataTypes.map((dt) => (
+                          <span key={dt} className="rounded bg-page px-1.5 py-0.5 text-[9px] font-mono text-muted border border-line">
+                            {dt}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Field & Metric Previews */}
+            <div className="rounded-control border border-line bg-page/60 p-3 space-y-2">
+              <span className="text-[11px] font-mono font-bold text-ink block">
+                PRE-CONFIGURED SCHEMA & METRICS FOR {selectedTemplate.label.toUpperCase()}
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                <div>
+                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">Custom Metadata Fields</span>
+                  <div className="flex flex-wrap gap-1">
+                    {customFields.map((cf) => (
+                      <span key={cf.key} className="rounded bg-card px-2 py-0.5 text-[10px] font-mono border border-line text-ink">
+                        {cf.label} ({cf.type})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">Target Evaluation Metrics</span>
+                  <div className="flex flex-wrap gap-1">
+                    {customMetrics.map((cm) => (
+                      <span key={cm.key} className="rounded bg-card px-2 py-0.5 text-[10px] font-mono border border-line text-teal-700 dark:text-teal-300">
+                        {cm.label} ({cm.unit})
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -323,8 +445,8 @@ export function MainResearchHub() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Marine Zoology & Fauna Photo-ID"
-                  className="w-full rounded-control border border-line bg-page px-3 py-2 text-xs text-ink"
+                  placeholder="e.g. Clinical Radiology Lab or Low-Resource NLP"
+                  className="w-full rounded-control border border-line bg-page px-3 py-2 text-xs text-ink focus:border-crimson focus:outline-none"
                 />
               </div>
 
@@ -348,8 +470,8 @@ export function MainResearchHub() {
                 rows={2}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief summary of research scope, field site, or species focus..."
-                className="w-full rounded-control border border-line bg-page p-2.5 text-xs text-ink"
+                placeholder="Brief summary of research scope, field site, or study focus..."
+                className="w-full rounded-control border border-line bg-page p-2.5 text-xs text-ink focus:border-crimson focus:outline-none"
               />
             </div>
 
@@ -359,16 +481,16 @@ export function MainResearchHub() {
                 rows={2}
                 value={hypothesis}
                 onChange={(e) => setHypothesis(e.target.value)}
-                placeholder="State the scientific or technical hypothesis being evaluated..."
-                className="w-full rounded-control border border-line bg-page p-2.5 text-xs text-ink"
+                placeholder="State the scientific, medical, or technical hypothesis being evaluated..."
+                className="w-full rounded-control border border-line bg-page p-2.5 text-xs text-ink focus:border-crimson focus:outline-none"
               />
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-line">
-              <Button variant="secondary" onClick={() => setIsCreating(false)}>
+              <Button variant="secondary" onClick={() => setIsCreating(false)} className="cursor-pointer">
                 Cancel
               </Button>
-              <Button variant="primary" loading={saving} icon="plus">
+              <Button variant="primary" loading={saving} icon="plus" className="cursor-pointer">
                 Create & Enter Vault
               </Button>
             </div>

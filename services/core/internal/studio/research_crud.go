@@ -620,13 +620,16 @@ var entFindings = &entity{
 }
 
 var entNotes = &entity{
-	table: "research_notes", noun: "note", titleField: "title", hasUpdated: true, order: "t.pinned DESC, t.updated_at DESC",
+	table: "research_notes", noun: "note", titleField: "title", hasUpdated: true, order: "t.pinned DESC, COALESCE(t.entry_number, 0) DESC, t.updated_at DESC",
 	fields: []field{
 		{name: "area_id", kind: "area"},
 		{name: "title", kind: "text", max: 200, required: true},
 		{name: "body", kind: "text", max: 50000},
 		{name: "pinned", kind: "bool"},
 		{name: "auto", kind: "bool", readOnly: true},
+		{name: "entry_number", kind: "int", min: 1, max: 999999},
+		{name: "evidence", kind: "json", max: 64 << 10},
+		{name: "metadata", kind: "json", max: 64 << 10},
 	},
 }
 
@@ -735,7 +738,41 @@ var entCollaborationContracts = &entity{
 		{name: "bounty_status", kind: "enum", enum: []string{"pending", "escrow_funded", "completed", "paid"}},
 		{name: "data_sandbox_permission", kind: "enum", enum: []string{"compute_only", "download_permitted"}},
 		{name: "role", kind: "enum", enum: []string{"owner", "editor", "viewer"}},
+		{name: "gpu_credit_cap", kind: "int", min: 0, max: 1000000},
+		{name: "grant_budget_cents", kind: "int64"},
+		{name: "gpu_credits_consumed", kind: "int", min: 0, max: 1000000},
 		{name: "status", kind: "enum", enum: []string{"active", "pending", "completed"}},
+	},
+}
+
+var entEthicsPermits = &entity{
+	table: "research_ethics_permits", noun: "ethics permit", titleField: "title", hasUpdated: false, order: "t.created_at DESC",
+	fields: []field{
+		{name: "area_id", kind: "area", required: true},
+		{name: "permit_type", kind: "enum", enum: []string{"irb_approval", "wildlife_permit", "data_license", "cites_permit", "mta_agreement", "hipaa_compliance", "participant_consent", "nda_agreement", "clinical_trial_protocol", "ethics_approval"}, required: true},
+		{name: "permit_number", kind: "text", max: 100, required: true},
+		{name: "issuing_authority", kind: "text", max: 200, required: true},
+		{name: "title", kind: "text", max: 250, required: true},
+		{name: "status", kind: "enum", enum: []string{"active", "pending_renewal", "expired"}},
+		{name: "valid_from", kind: "text", max: 20},
+		{name: "valid_until", kind: "text", max: 20},
+		{name: "metadata", kind: "json", max: 16 << 10},
+	},
+}
+
+var entActiveLabelingQueue = &entity{
+	table: "research_active_labeling_queue", noun: "active labeling queue item", titleField: "specimen_name", hasUpdated: false, order: "t.confidence ASC, t.created_at ASC",
+	fields: []field{
+		{name: "area_id", kind: "area", required: true},
+		{name: "specimen_id", kind: "area"},
+		{name: "specimen_name", kind: "text", max: 150, required: true},
+		{name: "media_url", kind: "text", max: 1000, required: true},
+		{name: "predicted_label", kind: "text", max: 150, required: true},
+		{name: "confidence", kind: "float", required: true},
+		{name: "alternative_label", kind: "text", max: 150},
+		{name: "status", kind: "enum", enum: []string{"pending", "confirmed", "corrected", "ambiguous"}},
+		{name: "resolved_label", kind: "text", max: 150},
+		{name: "reviewer_notes", kind: "text", max: 2000},
 	},
 }
 
@@ -787,6 +824,8 @@ func (h *Handler) ResearchEntities() map[string]*entity {
 		"collaboration-contracts": entCollaborationContracts,
 		"domain-insights":         entDomainInsights,
 		"publications":            entPublications,
+		"ethics-permits":          entEthicsPermits,
+		"active-labeling-queue":   entActiveLabelingQueue,
 	}
 }
 
